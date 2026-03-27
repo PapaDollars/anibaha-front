@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
   redirectUnauthorizedTo?: string;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requireCompany = false,
   requireSuperAdmin = false,
@@ -23,17 +23,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const location = useLocation();
   const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
 
-  // Redirection si non authentifié
   if (!isAuthenticated) {
     return <Navigate to={redirectUnauthenticatedTo} state={{ from: location }} replace />;
   }
 
-  // Vérification des rôles
-  if (requireSuperAdmin && user?.role !== 'superAdmin') {
+  if (requireSuperAdmin && user?.role !== 'super_admin') {
     return <Navigate to={redirectUnauthorizedTo} replace />;
   }
 
-  if (requireCompany && !['company', 'superAdmin'].includes(user?.role || '')) {
+  if (requireCompany && !['company_admin', 'super_admin'].includes(user?.role || '')) {
     return <Navigate to={redirectUnauthorizedTo} replace />;
   }
 

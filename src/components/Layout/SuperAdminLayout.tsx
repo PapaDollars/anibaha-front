@@ -14,7 +14,7 @@ import {
 import toast from 'react-hot-toast';
 
 import { RootState, AppDispatch } from '@/store';
-import { logout } from '@/store/slices-test/authSlice';
+import { logout } from '@/store/slices/authSlice';
 import { ROUTES } from '@/utils/url/url_frontend';
 
 interface MenuItem {

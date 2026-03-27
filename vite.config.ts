@@ -1,28 +1,32 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+// ================================================================
+// VITE CONFIG - Proxy vers le backend Anibaha (port 5000)
+// ================================================================
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
-  base: '/',
   plugins: [react()],
+
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
+
   server: {
     port: 3000,
-    open: true,
+    proxy: {
+      '/api': {
+        target:       'http://localhost:5000',
+        changeOrigin: true,
+        secure:       false,
+      },
+    },
   },
+
   build: {
-    outDir: 'dist',
+    outDir:    'dist',
     sourcemap: false,
-    // SUPPRIMER TOUT LE CHUNKING MANUEL
-    rollupOptions: {
-      output: {
-        // Laisser Vite gérer automatiquement
-        manualChunks: undefined
-      }
-    }
-  }
-})
+  },
+});

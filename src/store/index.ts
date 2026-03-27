@@ -1,26 +1,27 @@
+// ================================================================
+// STORE REDUX - Anibaha Frontend
+// ================================================================
 import { configureStore } from '@reduxjs/toolkit';
-
-import authReducer from '@/store/slices-test/authSlice';
-import cartReducer from '@/store/slices-test/cartSlice';
-import orderReducer from '@/store/slices-test/orderSlice';
-import productReducer from '@/store/slices-test/productSlice';
-import userReducer from '@/store/slices-test/userSlice';
-import settingsReducer from '@/store/slices-test/settingsSlice';
-import wishlistReducer from '@/store/slices-test/wishlistSlice';
-import brandReducer from '@/store/slices-test/brandSlice';
+import authReducer from '@/store/slices/authSlice';
+import productReducer from '@/store/slices/productSlice';
+import categoryReducer from '@/store/slices/categorySlice';
+// Décommenter au fur et à mesure
+// import cartReducer     from '@/store/slices/cartSlice';
+// import orderReducer    from '@/store/slices/orderSlice';
+// import wishlistReducer from '@/store/slices/wishlistSlice';
 
 export const store = configureStore({
   reducer: {
-    auth: authReducer,
-    cart: cartReducer,
-    orders: orderReducer,
-    product: productReducer,
-    users: userReducer,
-    settings: settingsReducer,
-    wishlist: wishlistReducer,
-    brands: brandReducer,
+    auth:     authReducer,
+    product:  productReducer,
+    category: categoryReducer,
+    // cart:     cartReducer,
+    // order:    orderReducer,
+    // wishlist: wishlistReducer,
   },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({ serializableCheck: false }),
 });
 
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch; 
+export type RootState   = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
