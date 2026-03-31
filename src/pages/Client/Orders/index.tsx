@@ -1,197 +1,220 @@
-import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Link, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faShoppingBag, 
-  faArrowLeft,
-  faBox,
-  faTruck,
-  faCheckCircle,
-  faTimesCircle,
-  faClock
-} from '@fortawesome/free-solid-svg-icons';
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+import { AppDispatch, RootState } from "@/store";
+import { fetchOrders } from "@/store/slices/orderSlice";
+import { formatFCFA } from "@/utils/formatPrix";
 
-import { RootState, AppDispatch } from '@/store';
-import { fetchUserOrders } from '@/store/slices-test/orderSlice';
-import { ROUTES } from '@/utils/url/url_frontend';
-import { formatDate } from '@/utils/date';
-import type { Order } from '@/types/order';
+// Correspondance statut → libellé français + couleur
+const STATUTS: Record<string, { label: string; couleur: string; fond: string }> = {
+  pending:    { label: "En attente",    couleur: "#92400e", fond: "#fef3c7" },
+  confirmed:  { label: "Confirmée",     couleur: "#1d4ed8", fond: "#eff6ff" },
+  processing: { label: "En traitement", couleur: "#6d28d9", fond: "#f5f3ff" },
+  shipped:    { label: "Expédiée",      couleur: "#0369a1", fond: "#e0f2fe" },
+  delivered:  { label: "Livrée",        couleur: "#065f46", fond: "#d1fae5" },
+  cancelled:  { label: "Annulée",       couleur: "#7f1d1d", fond: "#fee2e2" },
+  refunded:   { label: "Remboursée",    couleur: "#374151", fond: "#f3f4f6" },
+};
 
-const Orders: React.FC = () => {
-  const { t } = useTranslation();
+export default function OrderList() {
   const dispatch = useDispatch<AppDispatch>();
-  const navigate = useNavigate();
-  const { orders, loading, error } = useSelector((state: RootState) => state.orders);
+  const { orders: commandes, chargement } = useSelector(
+    (state: RootState) => state.order
+  );
 
   useEffect(() => {
-    dispatch(fetchUserOrders());
+    dispatch(fetchOrders({}));
   }, [dispatch]);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <FontAwesomeIcon icon={faClock} className="text-yellow-500" />;
-      case 'processing':
-        return <FontAwesomeIcon icon={faBox} className="text-blue-500" />;
-      case 'shipped':
-        return <FontAwesomeIcon icon={faTruck} className="text-purple-500" />;
-      case 'delivered':
-        return <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />;
-      case 'cancelled':
-        return <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />;
-      default:
-        return <FontAwesomeIcon icon={faBox} className="text-gray-500" />;
-    }
-  };
-
-  if (loading) {
+  if (chargement) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mx-auto mb-8"></div>
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      <div className="chargement">Chargement de vos commandes...</div>
     );
   }
 
-  if (error) {
+  if (commandes.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="bg-white rounded-3xl shadow-xl p-12">
-            <div className="text-red-500 mb-4">
-              <FontAwesomeIcon icon={faTimesCircle} className="text-4xl" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              {t('orders.error', 'Erreur lors du chargement des commandes')}
-            </h2>
-            <button
-              onClick={() => dispatch(fetchUserOrders())}
-              className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-            >
-              {t('common.retry', 'Réessayer')}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+      <div className="commandes-vides">
+        <div className="vide-icone">📦</div>
+        <h2>Aucune commande</h2>
+        <p>Vous n'avez pas encore passé de commande.</p>
+        <Link to="/produits" className="bouton-primaire">
+          Découvrir nos produits
+        </Link>
 
-  if (orders.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="bg-white rounded-3xl shadow-xl p-12">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-8">
-              <FontAwesomeIcon icon={faShoppingBag} className="text-gray-400 text-4xl" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              {t('orders.empty')}
-            </h2>
-            <p className="text-xl text-gray-600 mb-8">
-              {t('orders.emptyDescription')}
-            </p>
-            <Link
-              to={ROUTES.PUBLIC.CATALOG.PRODUCTS}
-              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg"
-            >
-              <FontAwesomeIcon icon={faShoppingBag} className="mr-3" />
-              {t('orders.startShopping')}
-            </Link>
-          </div>
-        </div>
+        <style>{`
+          .commandes-vides { text-align: center; padding: 60px 20px; font-family: system-ui, sans-serif; }
+          .vide-icone { font-size: 56px; margin-bottom: 16px; }
+          .commandes-vides h2 { font-size: 20px; font-weight: 700; color: #111; margin: 0 0 8px; }
+          .commandes-vides p { color: #6b7280; margin-bottom: 20px; }
+          .bouton-primaire {
+            display: inline-block;
+            background: #ff6b35;
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+          }
+        `}</style>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <Link
-              to={ROUTES.USER.PROFILE.BASE}
-              className="p-3 text-gray-600 hover:text-gray-900 hover:bg-white rounded-xl transition-all duration-200"
-            >
-              <FontAwesomeIcon icon={faArrowLeft} />
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {t('orders.title')}
-              </h1>
-              <p className="text-gray-600 mt-1">
-                {orders.length} {orders.length === 1 ? t('orders.order', 'commande') : t('orders.orders', 'commandes')}
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="page-commandes">
+      <h1 className="page-titre">Mes commandes ({commandes.length})</h1>
 
-        {/* Orders List */}
-        <div className="space-y-4">
-          {orders.map((order: Order) => (
-            <div
-              key={order.id}
-              className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200"
-            >
-              <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-4">
-                    <div className="text-2xl">
-                      {getStatusIcon(order.status)}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {t('orders.orderNumber', { number: order.id })}
-                      </h3>
-                      <p className="text-gray-600">
-                        {t('orders.orderDate', { date: formatDate(order.createdAt) })}
-                      </p>
-                    </div>
-                  </div>
+      <div className="liste-commandes">
+        {commandes.map((commande) => {
+          const statut = STATUTS[commande.status] || {
+            label: commande.status,
+            couleur: "#374151",
+            fond: "#f3f4f6",
+          };
+
+          return (
+            <div key={commande.id} className="commande-carte">
+              {/* En-tête de la commande */}
+              <div className="commande-header">
+                <div className="commande-meta">
+                  <span className="commande-numero">
+                    Commande #{commande.id.slice(-8).toUpperCase()}
+                  </span>
+                  <span className="commande-date">
+                    {new Date(commande.createdAt).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </span>
                 </div>
+                <span
+                  className="badge-statut"
+                  style={{
+                    color: statut.couleur,
+                    background: statut.fond,
+                  }}
+                >
+                  {statut.label}
+                </span>
+              </div>
 
-                <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-8">
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">{t('orders.orderStatus')}</p>
-                    <p className="font-semibold text-gray-900">
-                      {t(`orders.status.${order.status}`)}
-                    </p>
+              {/* Articles de la commande */}
+              <div className="commande-articles">
+                {commande.items?.slice(0, 3).map((item: any) => (
+                  <div key={item.id} className="article-miniature-bloc">
+                    <img
+                      src={item.product?.images?.[0]?.url || "/placeholder.png"}
+                      alt={item.product?.name}
+                      className="miniature-img"
+                    />
+                    <span className="miniature-nom">{item.product?.name}</span>
+                    <span className="miniature-qte">×{item.quantity}</span>
                   </div>
+                ))}
+                {commande.items?.length > 3 && (
+                  <span className="plus-articles">
+                    +{commande.items.length - 3} autres
+                  </span>
+                )}
+              </div>
 
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">{t('orders.orderTotal')}</p>
-                    <p className="font-semibold text-gray-900">
-                      {order.totals.total.toLocaleString('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR',
-                      })}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => navigate(ROUTES.GENERATORS.getOrderDetails(order.id))}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-                  >
-                    {t('orders.viewDetails')}
-                  </button>
+              {/* Pied de la commande */}
+              <div className="commande-footer">
+                <div className="commande-paiement">
+                  <span className="paiement-icone">💵</span>
+                  <span className="paiement-mode">Espèces à la livraison</span>
                 </div>
+                {/* Montant total en FCFA */}
+                <div className="commande-total">
+                  {formatFCFA(commande.totals?.total ?? 0)}
+                </div>
+                <Link
+                  to={`/commandes/${commande.id}`}
+                  className="lien-details"
+                >
+                  Voir les détails →
+                </Link>
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
+
+      <style>{`
+        .page-commandes { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 24px; }
+        .page-titre { font-size: 22px; font-weight: 700; color: #111; margin: 0 0 20px; }
+        .chargement { text-align: center; padding: 60px; color: #9ca3af; font-family: system-ui, sans-serif; }
+
+        .liste-commandes { display: flex; flex-direction: column; gap: 16px; }
+
+        .commande-carte {
+          background: #fff;
+          border-radius: 10px;
+          border: 1px solid #e5e7eb;
+          overflow: hidden;
+        }
+
+        .commande-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 20px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+        .commande-meta { display: flex; flex-direction: column; gap: 2px; }
+        .commande-numero { font-size: 14px; font-weight: 700; color: #111; }
+        .commande-date { font-size: 12px; color: #9ca3af; }
+
+        .badge-statut {
+          font-size: 12px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 20px;
+        }
+
+        .commande-articles {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 14px 20px;
+          flex-wrap: wrap;
+        }
+        .article-miniature-bloc {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: #f9fafb;
+          border-radius: 6px;
+          padding: 6px 10px;
+        }
+        .miniature-img { width: 32px; height: 32px; object-fit: cover; border-radius: 4px; }
+        .miniature-nom { font-size: 13px; color: #374151; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .miniature-qte { font-size: 12px; color: #9ca3af; }
+        .plus-articles { font-size: 12px; color: #9ca3af; }
+
+        .commande-footer {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 12px 20px;
+          border-top: 1px solid #f3f4f6;
+          background: #fafafa;
+        }
+        .commande-paiement { display: flex; align-items: center; gap: 6px; flex: 1; }
+        .paiement-icone { font-size: 16px; }
+        .paiement-mode { font-size: 13px; color: #6b7280; }
+        .commande-total { font-size: 16px; font-weight: 700; color: #ff6b35; }
+        .lien-details {
+          font-size: 13px;
+          color: #6b7280;
+          text-decoration: none;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+        .lien-details:hover { color: #ff6b35; }
+      `}</style>
     </div>
   );
-};
-
-export default Orders; 
+}

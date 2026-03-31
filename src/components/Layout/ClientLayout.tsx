@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 import { RootState, AppDispatch } from '@/store';
-import { logout } from '@/store/slices/authSlice';
+import { deconnexion } from '@/store/slices/authSlice';
 import { ROUTES } from '@/utils/url/url_frontend';
 import ClientNavbar from '@/components/Navbar/ClientNavbar';
 import Copyright from '@/components/common/copyright';
@@ -29,7 +29,7 @@ const ClientLayout: React.FC = () => {
 
     const handleLogout = async () => {
         try {
-            await dispatch(logout());
+            await dispatch(deconnexion());
             toast.success(t('auth.logoutSuccess', 'Déconnexion réussie'));
             navigate(ROUTES.PUBLIC.HOME);
         } catch {
@@ -82,7 +82,7 @@ const ClientLayout: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             <ClientNavbar
-                user={user ?? undefined}
+                user={user as any}
                 onLogin={handleLogin}
                 onLogout={handleLogout}
                 onSearch={handleSearch}

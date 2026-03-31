@@ -24,7 +24,7 @@ import {
   selectCompanies, 
   selectCompanyLoading, 
   selectCompanyError 
-} from '@/store/slices-test/brandSlice';
+} from '@/store/slices/brandSlice';
 import { Company } from '@/types/company';
 // import { updateUserRole } from '@/store/slices/authSlice';
 
@@ -34,7 +34,7 @@ const AdminBrands: React.FC = () => {
   const brands: Company[] = useSelector(selectCompanies) as Company[];
   const loading = useSelector(selectCompanyLoading);
   const error = useSelector(selectCompanyError);
-  const isSuperAdmin = useSelector((state: RootState) => state.auth.user?.role === 'superAdmin');
+  const isSuperAdmin = useSelector((state: RootState) => state.auth.user?.role === 'super_admin');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<Company | null>(null);
@@ -46,7 +46,7 @@ const AdminBrands: React.FC = () => {
   });
 
   useEffect(() => {
-    dispatch(fetchBrands());
+    dispatch(fetchBrands({}));
   }, [dispatch]);
 
   const handleSubmit = async (e: React.FormEvent) => {

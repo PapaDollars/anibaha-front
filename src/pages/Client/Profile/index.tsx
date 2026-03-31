@@ -1,745 +1,788 @@
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faUser, 
-  faEnvelope, 
-  faLock, 
-  faEye, 
-  faEyeSlash,
-  faEdit,
-  faCheck,
-  faTimes,
-  faCamera,
-  faPhone,
-  faMapMarkerAlt,
-  faCalendarAlt,
-  faShieldAlt,
-  faCheckCircle,
-  faPlus,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons';
-import { useSelector, useDispatch } from 'react-redux';
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/store";
+import {
+  fetchProfil,
+  mettreAJourProfil,
+  changePassword,
+  addAddress,
+  updateAddress,
+  deleteAddress,
+  effacerErreur,
+  effacerMessageSucces,
+} from "@/store/slices/userSlice";
+import { formatFCFA } from "@/utils/formatPrix";
 
-import { RootState, AppDispatch } from '@/store';
-import { updateProfile } from '@/store/slices-test/authSlice';
-import toast from 'react-hot-toast';
-import { Address } from '@/types/user';
+// Onglets disponibles
+type Onglet = "profil" | "adresses" | "securite" | "points";
 
-const Profile: React.FC = () => {
-  const { t } = useTranslation();
+export default function Profile() {
   const dispatch = useDispatch<AppDispatch>();
-  const { user } = useSelector((state: RootState) => state.auth);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isEditingAddress, setIsEditingAddress] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const {
+    profil,
+    chargement,
+    chargementMdp,
+    chargementAdresse,
+    erreur,
+    messageSucces,
+  } = useSelector((state: RootState) => state.users);
 
-  const [formData, setFormData] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+  const [ongletActif, setOngletActif] = useState<Onglet>("profil");
+
+  // Formulaire profil
+  const [formProfil, setFormProfil] = useState({
+    name: "",
+    phone: "",
   });
 
-  const [addressForm, setAddressForm] = useState<Address>({
-    id: '',
-    street: '',
-    city: '',
-    postalCode: '',
-    country: '',
-    isDefault: false
+  // Formulaire mot de passe
+  const [formMdp, setFormMdp] = useState({
+    ancienMotDePasse: "",
+    nouveauMotDePasse: "",
+    confirmationMotDePasse: "",
   });
 
-  const [errors, setErrors] = useState<{
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    phone?: string;
-    currentPassword?: string;
-    newPassword?: string;
-    confirmPassword?: string;
-    street?: string;
-    city?: string;
-    postalCode?: string;
-    country?: string;
-  }>({});
+  // Modal adresse
+  const [modalAdresseOuverte, setModalAdresseOuverte] = useState(false);
+  const [adresseEnEdition, setAdresseEnEdition] = useState<any>(null);
+  const [formAdresse, setFormAdresse] = useState({
+    label: "",
+    rue: "",
+    ville: "",
+    quartier: "",
+    telephone: "",
+    estPrincipale: false,
+  });
 
-  const validateForm = () => {
-    const newErrors: typeof errors = {};
+  useEffect(() => {
+    dispatch(fetchProfil());
+  }, [dispatch]);
 
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = t('validation.firstNameRequired', 'Le prénom est requis');
+  useEffect(() => {
+    if (profil) {
+      setFormProfil({ name: profil.name, phone: profil.phone || "" });
     }
+  }, [profil]);
 
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = t('validation.lastNameRequired', 'Le nom est requis');
+  // Effacer les messages après 4 secondes
+  useEffect(() => {
+    if (messageSucces || erreur) {
+      const minuterie = setTimeout(() => {
+        dispatch(effacerErreur());
+        dispatch(effacerMessageSucces());
+      }, 4000);
+      return () => clearTimeout(minuterie);
     }
+  }, [messageSucces, erreur, dispatch]);
 
-    if (!formData.email.trim()) {
-      newErrors.email = t('validation.emailRequired', "L'email est requis");
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = t('validation.emailInvalid', "L'email n'est pas valide");
-    }
-
-    if (formData.phone && !/^\+?[\d\s-]{8,}$/.test(formData.phone)) {
-      newErrors.phone = t('validation.phoneInvalid', 'Le numéro de téléphone n\'est pas valide');
-    }
-
-    if (formData.newPassword) {
-      if (!formData.currentPassword) {
-        newErrors.currentPassword = t('validation.currentPasswordRequired', 'Le mot de passe actuel est requis');
-      }
-
-      if (formData.newPassword.length < 6) {
-        newErrors.newPassword = t('validation.passwordMinLength', 'Le nouveau mot de passe doit contenir au moins 6 caractères');
-      }
-
-      if (formData.newPassword !== formData.confirmPassword) {
-        newErrors.confirmPassword = t('validation.passwordsNoMatch', 'Les mots de passe ne correspondent pas');
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateAddressForm = () => {
-    const newErrors: typeof errors = {};
-
-    if (!addressForm.street.trim()) {
-      newErrors.street = t('validation.streetRequired', 'La rue est requise');
-    }
-
-    if (!addressForm.city.trim()) {
-      newErrors.city = t('validation.cityRequired', 'La ville est requise');
-    }
-
-    if (!addressForm.postalCode.trim()) {
-      newErrors.postalCode = t('validation.postalCodeRequired', 'Le code postal est requis');
-    }
-
-    if (!addressForm.country.trim()) {
-      newErrors.country = t('validation.countryRequired', 'Le pays est requis');
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const sauvegarderProfil = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      const updateData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        ...(formData.newPassword && { 
-          currentPassword: formData.currentPassword,
-          newPassword: formData.newPassword 
-        })
-      };
-
-      await dispatch(updateProfile(updateData)).unwrap();
-      
-      toast.success(t('profile.updateSuccess', 'Profil mis à jour avec succès'));
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du profil:', error);
-      toast.error(t('profile.updateError', 'Erreur lors de la mise à jour du profil'));
-    }
+    await dispatch(mettreAJourProfil(formProfil));
   };
 
-  const handleAddressSubmit = async (e: React.FormEvent) => {
+  const changerMotDePasse = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateAddressForm()) {
-      return;
-    }
-
-    try {
-      // TODO: Implémenter la mise à jour de l'adresse
-      toast.success(t('profile.addressUpdateSuccess', 'Adresse mise à jour avec succès'));
-      setIsEditingAddress(false);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour de l\'adresse:', error);
-      toast.error(t('profile.addressUpdateError', 'Erreur lors de la mise à jour de l\'adresse'));
+    const resultat = await dispatch(changePassword(formMdp));
+    if (changePassword.fulfilled.match(resultat)) {
+      setFormMdp({
+        ancienMotDePasse: "",
+        nouveauMotDePasse: "",
+        confirmationMotDePasse: "",
+      });
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    
-    // Clear error for this field
-    if (errors[name as keyof typeof errors]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: undefined
-      }));
+  const ouvrirModalAdresse = (adresse?: any) => {
+    if (adresse) {
+      setAdresseEnEdition(adresse);
+      setFormAdresse({
+        label: adresse.label,
+        rue: adresse.rue,
+        ville: adresse.ville,
+        quartier: adresse.quartier || "",
+        telephone: adresse.telephone || "",
+        estPrincipale: adresse.estPrincipale,
+      });
+    } else {
+      setAdresseEnEdition(null);
+      setFormAdresse({
+        label: "",
+        rue: "",
+        ville: "",
+        quartier: "",
+        telephone: "",
+        estPrincipale: false,
+      });
+    }
+    setModalAdresseOuverte(true);
+  };
+
+  const soumettreAdresse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (adresseEnEdition) {
+      await dispatch(updateAddress({ id: adresseEnEdition.id, donnees: formAdresse }));
+    } else {
+      await dispatch(addAddress(formAdresse));
+    }
+    setModalAdresseOuverte(false);
+  };
+
+  const supprimerAdresse = async (id: string) => {
+    if (confirm("Supprimer cette adresse ?")) {
+      await dispatch(deleteAddress(id));
     }
   };
 
-  const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setAddressForm((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-    
-    // Clear error for this field
-    if (errors[name as keyof typeof errors]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: undefined
-      }));
-    }
-  };
-
-  const handleCancel = () => {
-    setFormData({
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    });
-    setErrors({});
-    setIsEditing(false);
-  };
-
-  const handleCancelAddress = () => {
-    setAddressForm({
-      id: '',
-      street: '',
-      city: '',
-      postalCode: '',
-      country: '',
-      isDefault: false
-    });
-    setErrors({});
-    setIsEditingAddress(false);
-  };
-
-  if (!user) {
-    return <div>Loading...</div>;
+  if (chargement && !profil) {
+    return <div className="chargement">Chargement du profil...</div>;
   }
 
+  if (!profil) {
+    return <div className="erreur-page">Impossible de charger le profil</div>;
+  }
+
+  const onglets: { id: Onglet; label: string; icone: string }[] = [
+    { id: "profil",    label: "Mon profil",     icone: "👤" },
+    { id: "adresses",  label: "Mes adresses",   icone: "📍" },
+    { id: "securite",  label: "Sécurité",       icone: "🔒" },
+    { id: "points",    label: "Mes points",     icone: "⭐" },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
-          {/* En-tête du profil */}
-          <div className="relative h-48 bg-gradient-to-r from-blue-500 to-blue-600">
-            <div className="absolute -bottom-16 left-8">
-              <div className="relative">
-                <img
-                  src={user.avatar || 'https://i.pravatar.cc/150?img=1'}
-                  alt={`${user.firstName} ${user.lastName}`}
-                  className="w-32 h-32 rounded-full border-4 border-white shadow-lg"
-                />
-                <button
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="absolute bottom-0 ml-40 bg-blue-600 text-white px-6 rounded-full hover:bg-blue-700 transition-colors"
-                >
-                  <FontAwesomeIcon icon={faEdit} /> Modifier
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Informations du profil */}
-          <div className="pt-20 pb-8 px-8">
-            <div className="flex justify-between items-start mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  {user.firstName} {user.lastName}
-                </h1>
-                <p className="text-gray-600 mt-1">
-                  {user.role === 'superAdmin' ? t('profile.admin', 'Administrateur') : t('profile.user', 'Utilisateur')}
-                </p>
-              </div>
-              <div className="flex items-center space-x-2">
-                {user.isVerified && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                    <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
-                    {t('profile.verified', 'Vérifié')}
-                  </span>
-                )}
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                  {user.isActive ? t('profile.active', 'Actif') : t('profile.inactive', 'Inactif')}
-                </span>
-              </div>
-            </div>
-
-            {isEditing ? (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('user.firstName', 'Prénom')}
-                    </label>
-                    <input
-                      type="text"
-                      name="firstName"
-                      id="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        errors.firstName ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                    />
-                    {errors.firstName && (
-                      <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('user.lastName', 'Nom')}
-                    </label>
-                    <input
-                      type="text"
-                      name="lastName"
-                      id="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        errors.lastName ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                    />
-                    {errors.lastName && (
-                      <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('user.email', 'Email')}
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    id="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.email ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('user.phone', 'Téléphone')}
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    id="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.phone ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.phone && (
-                    <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
-                  )}
-                </div>
-
-                <div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    {t('profile.changePassword', 'Changer le mot de passe')}
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('user.currentPassword', 'Mot de passe actuel')}
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showCurrentPassword ? 'text' : 'password'}
-                          name="currentPassword"
-                          id="currentPassword"
-                          value={formData.currentPassword}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                            errors.currentPassword ? 'border-red-300' : 'border-gray-300'
-                          }`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                        >
-                          <FontAwesomeIcon icon={showCurrentPassword ? faEyeSlash : faEye} />
-                        </button>
-                      </div>
-                      {errors.currentPassword && (
-                        <p className="mt-1 text-sm text-red-600">{errors.currentPassword}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('user.newPassword', 'Nouveau mot de passe')}
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showNewPassword ? 'text' : 'password'}
-                          name="newPassword"
-                          id="newPassword"
-                          value={formData.newPassword}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                            errors.newPassword ? 'border-red-300' : 'border-gray-300'
-                          }`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                        >
-                          <FontAwesomeIcon icon={showNewPassword ? faEyeSlash : faEye} />
-                        </button>
-                      </div>
-                      {errors.newPassword && (
-                        <p className="mt-1 text-sm text-red-600">{errors.newPassword}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('user.confirmPassword', 'Confirmer le nouveau mot de passe')}
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showConfirmPassword ? 'text' : 'password'}
-                          name="confirmPassword"
-                          id="confirmPassword"
-                          value={formData.confirmPassword}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                            errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                          }`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                        >
-                          <FontAwesomeIcon icon={showConfirmPassword ? faEyeSlash : faEye} />
-                        </button>
-                      </div>
-                      {errors.confirmPassword && (
-                        <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end space-x-4">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="px-6 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50"
-                  >
-                    {t('common.cancel', 'Annuler')}
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-                  >
-                    {t('common.save', 'Enregistrer')}
-                  </button>
-                </div>
-              </form>
+    <div className="page-profil">
+      {/* En-tête du profil */}
+      <div className="profil-header">
+        <div className="avatar-bloc">
+          <div className="avatar">
+            {profil.avatar ? (
+              <img src={profil.avatar} alt={profil.name} />
             ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Informations de contact */}
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                      {t('profile.contactInfo', 'Informations de contact')}
-                    </h2>
-                    
-                    <div className="flex items-start space-x-4">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                        <FontAwesomeIcon icon={faEnvelope} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">{t('profile.email', 'Email')}</p>
-                        <p className="text-gray-900">{user.email}</p>
-                      </div>
-                    </div>
-
-                    {user.phone && (
-                      <div className="flex items-start space-x-4">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                          <FontAwesomeIcon icon={faPhone} />
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">{t('profile.phone', 'Téléphone')}</p>
-                          <p className="text-gray-900">{user.phone}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Adresses */}
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                      <h2 className="text-xl font-semibold text-gray-900">
-                        {t('profile.addresses', 'Adresses')}
-                      </h2>
-                      <button
-                        onClick={() => setIsEditingAddress(true)}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-                      >
-                        <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                        {t('profile.addAddress', 'Ajouter une adresse')}
-                      </button>
-                    </div>
-
-                    {user.addresses && user.addresses.length > 0 ? (
-                      <div className="space-y-4">
-                        {user.addresses.map((address) => (
-                          <div key={address.id} className="bg-gray-50 rounded-xl p-4">
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-start space-x-4">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                  <FontAwesomeIcon icon={faMapMarkerAlt} />
-                                </div>
-                                <div>
-                                  <p className="text-gray-900">
-                                    {address.street}<br />
-                                    {address.postalCode} {address.city}<br />
-                                    {address.country}
-                                  </p>
-                                  {address.isDefault && (
-                                    <span className="inline-flex items-center mt-2 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                      {t('profile.defaultAddress', 'Adresse par défaut')}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex space-x-2">
-                                <button
-                                  onClick={() => {
-                                    setAddressForm(address);
-                                    setIsEditingAddress(true);
-                                  }}
-                                  className="p-2 text-gray-400 hover:text-blue-600"
-                                >
-                                  <FontAwesomeIcon icon={faEdit} />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    // TODO: Implémenter la suppression d'adresse
-                                    toast.error(t('profile.addressDeleteError', 'Fonctionnalité non implémentée'));
-                                  }}
-                                  className="p-2 text-gray-400 hover:text-red-600"
-                                >
-                                  <FontAwesomeIcon icon={faTrash} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 bg-gray-50 rounded-xl">
-                        <p className="text-gray-500">
-                          {t('profile.noAddresses', 'Aucune adresse enregistrée')}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Informations du compte */}
-                <div className="mt-8 pt-8 border-t border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                    {t('profile.accountInfo', 'Informations du compte')}
-                  </h2>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                        <FontAwesomeIcon icon={faCalendarAlt} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">{t('profile.memberSince', 'Membre depuis')}</p>
-                        <p className="text-gray-900">
-                          {new Date(user.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-
-                    {user.lastLogin && (
-                      <div className="flex items-start space-x-4">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                          <FontAwesomeIcon icon={faShieldAlt} />
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">{t('profile.lastLogin', 'Dernière connexion')}</p>
-                          <p className="text-gray-900">
-                            {new Date(user.lastLogin).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
+              <span>{profil.name.charAt(0).toUpperCase()}</span>
             )}
-
-            {/* Formulaire d'édition d'adresse */}
-            {isEditingAddress && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl p-6 max-w-lg w-full">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                    {addressForm.id ? t('profile.editAddress', 'Modifier l\'adresse') : t('profile.addAddress', 'Ajouter une adresse')}
-                  </h3>
-                  <form onSubmit={handleAddressSubmit} className="space-y-4">
-                    <div>
-                      <label htmlFor="street" className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('address.street', 'Rue')}
-                      </label>
-                      <input
-                        type="text"
-                        name="street"
-                        id="street"
-                        value={addressForm.street}
-                        onChange={handleAddressInputChange}
-                        className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                          errors.street ? 'border-red-300' : 'border-gray-300'
-                        }`}
-                      />
-                      {errors.street && (
-                        <p className="mt-1 text-sm text-red-600">{errors.street}</p>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-2">
-                          {t('address.postalCode', 'Code postal')}
-                        </label>
-                        <input
-                          type="text"
-                          name="postalCode"
-                          id="postalCode"
-                          value={addressForm.postalCode}
-                          onChange={handleAddressInputChange}
-                          className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                            errors.postalCode ? 'border-red-300' : 'border-gray-300'
-                          }`}
-                        />
-                        {errors.postalCode && (
-                          <p className="mt-1 text-sm text-red-600">{errors.postalCode}</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
-                          {t('address.city', 'Ville')}
-                        </label>
-                        <input
-                          type="text"
-                          name="city"
-                          id="city"
-                          value={addressForm.city}
-                          onChange={handleAddressInputChange}
-                          className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                            errors.city ? 'border-red-300' : 'border-gray-300'
-                          }`}
-                        />
-                        {errors.city && (
-                          <p className="mt-1 text-sm text-red-600">{errors.city}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('address.country', 'Pays')}
-                      </label>
-                      <input
-                        type="text"
-                        name="country"
-                        id="country"
-                        value={addressForm.country}
-                        onChange={handleAddressInputChange}
-                        className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                          errors.country ? 'border-red-300' : 'border-gray-300'
-                        }`}
-                      />
-                      {errors.country && (
-                        <p className="mt-1 text-sm text-red-600">{errors.country}</p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="isDefault"
-                        id="isDefault"
-                        checked={addressForm.isDefault}
-                        onChange={handleAddressInputChange}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="isDefault" className="ml-2 block text-sm text-gray-700">
-                        {t('address.setAsDefault', 'Définir comme adresse par défaut')}
-                      </label>
-                    </div>
-
-                    <div className="flex justify-end space-x-4 mt-6">
-                      <button
-                        type="button"
-                        onClick={handleCancelAddress}
-                        className="px-6 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50"
-                      >
-                        {t('common.cancel', 'Annuler')}
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-                      >
-                        {t('common.save', 'Enregistrer')}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
+          </div>
+          <div className="header-info">
+            <h1 className="header-nom">{profil.name}</h1>
+            <p className="header-email">{profil.email}</p>
+            <div className="header-points">
+              <span className="points-icone">⭐</span>
+              <span>{profil.points} points de fidélité</span>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Messages globaux */}
+      {messageSucces && (
+        <div className="alerte succes">{messageSucces}</div>
+      )}
+      {erreur && <div className="alerte erreur-alerte">{erreur}</div>}
+
+      {/* Navigation par onglets */}
+      <div className="onglets-nav">
+        {onglets.map((onglet) => (
+          <button
+            key={onglet.id}
+            className={`onglet-bouton ${ongletActif === onglet.id ? "actif" : ""}`}
+            onClick={() => setOngletActif(onglet.id)}
+          >
+            <span>{onglet.icone}</span>
+            <span>{onglet.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Onglet Profil ── */}
+      {ongletActif === "profil" && (
+        <div className="section-card">
+          <h2 className="section-titre">Informations personnelles</h2>
+          <form onSubmit={sauvegarderProfil}>
+            <div className="grille-form">
+              <div className="groupe-champ">
+                <label>Nom complet</label>
+                <input
+                  type="text"
+                  value={formProfil.name}
+                  onChange={(e) =>
+                    setFormProfil((f) => ({ ...f, name: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="groupe-champ">
+                <label>Email</label>
+                <input
+                  type="email"
+                  value={profil.email}
+                  disabled
+                  className="champ-desactive"
+                />
+              </div>
+              <div className="groupe-champ">
+                <label>Téléphone</label>
+                <input
+                  type="tel"
+                  value={formProfil.phone}
+                  onChange={(e) =>
+                    setFormProfil((f) => ({ ...f, phone: e.target.value }))
+                  }
+                  placeholder="+237 6XX XXX XXX"
+                />
+              </div>
+              <div className="groupe-champ">
+                <label>Rôle</label>
+                <input
+                  type="text"
+                  value={
+                    profil.role === "client"
+                      ? "Client"
+                      : profil.role === "company_admin"
+                      ? "Vendeur"
+                      : "Super Admin"
+                  }
+                  disabled
+                  className="champ-desactive"
+                />
+              </div>
+            </div>
+            <div className="actions-form">
+              <button type="submit" className="bouton-primaire" disabled={chargement}>
+                {chargement ? "Sauvegarde..." : "Enregistrer les modifications"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ── Onglet Adresses ── */}
+      {ongletActif === "adresses" && (
+        <div className="section-card">
+          <div className="section-header">
+            <h2 className="section-titre">Mes adresses de livraison</h2>
+            <button
+              className="bouton-primaire"
+              onClick={() => ouvrirModalAdresse()}
+            >
+              + Ajouter
+            </button>
+          </div>
+
+          {profil.adresses.length === 0 ? (
+            <div className="vide-bloc">
+              <p>Aucune adresse enregistrée.</p>
+              <button
+                className="bouton-primaire"
+                onClick={() => ouvrirModalAdresse()}
+              >
+                Ajouter une adresse
+              </button>
+            </div>
+          ) : (
+            <div className="liste-adresses">
+              {profil.adresses.map((adresse) => (
+                <div
+                  key={adresse.id}
+                  className={`adresse-carte ${adresse.estPrincipale ? "principale" : ""}`}
+                >
+                  {adresse.estPrincipale && (
+                    <span className="badge-principale">Principale</span>
+                  )}
+                  <div className="adresse-label">{adresse.label}</div>
+                  <div className="adresse-detail">
+                    {adresse.rue}
+                    {adresse.quartier && `, ${adresse.quartier}`}
+                  </div>
+                  <div className="adresse-ville">{adresse.ville}</div>
+                  {adresse.telephone && (
+                    <div className="adresse-tel">📞 {adresse.telephone}</div>
+                  )}
+                  <div className="adresse-actions">
+                    <button
+                      className="bouton-action modifier"
+                      onClick={() => ouvrirModalAdresse(adresse)}
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      className="bouton-action supprimer"
+                      onClick={() => supprimerAdresse(adresse.id)}
+                      disabled={chargementAdresse}
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Onglet Sécurité ── */}
+      {ongletActif === "securite" && (
+        <div className="section-card">
+          <h2 className="section-titre">Changer le mot de passe</h2>
+          <form onSubmit={changerMotDePasse} style={{ maxWidth: 420 }}>
+            <div className="groupe-champ">
+              <label>Mot de passe actuel *</label>
+              <input
+                type="password"
+                required
+                value={formMdp.ancienMotDePasse}
+                onChange={(e) =>
+                  setFormMdp((f) => ({
+                    ...f,
+                    ancienMotDePasse: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="groupe-champ">
+              <label>Nouveau mot de passe *</label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={formMdp.nouveauMotDePasse}
+                onChange={(e) =>
+                  setFormMdp((f) => ({
+                    ...f,
+                    nouveauMotDePasse: e.target.value,
+                  }))
+                }
+              />
+              <span className="aide-champ">Minimum 8 caractères</span>
+            </div>
+            <div className="groupe-champ">
+              <label>Confirmer le nouveau mot de passe *</label>
+              <input
+                type="password"
+                required
+                value={formMdp.confirmationMotDePasse}
+                onChange={(e) =>
+                  setFormMdp((f) => ({
+                    ...f,
+                    confirmationMotDePasse: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="actions-form">
+              <button
+                type="submit"
+                className="bouton-primaire"
+                disabled={chargementMdp}
+              >
+                {chargementMdp ? "Modification..." : "Changer le mot de passe"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ── Onglet Points ── */}
+      {ongletActif === "points" && (
+        <div className="section-card">
+          <h2 className="section-titre">Programme de fidélité</h2>
+
+          {/* Solde de points */}
+          <div className="points-solde">
+            <div className="points-valeur">{profil.points}</div>
+            <div className="points-unite">points de fidélité</div>
+          </div>
+
+          <div className="points-info">
+            <div className="info-ligne">
+              <span className="info-icone">🛍️</span>
+              <div>
+                <div className="info-titre">Comment gagner des points ?</div>
+                <div className="info-desc">
+                  Vous recevez <strong>100 points</strong> automatiquement lorsque
+                  chaque commande est livrée.
+                </div>
+              </div>
+            </div>
+            <div className="info-ligne">
+              <span className="info-icone">⭐</span>
+              <div>
+                <div className="info-titre">Votre solde actuel</div>
+                <div className="info-desc">
+                  Vous avez accumulé <strong>{profil.points} points</strong> grâce à vos
+                  commandes.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Historique simplifié */}
+          <div className="points-historique">
+            <h3 className="historique-titre">Dernières transactions</h3>
+            <p className="historique-vide">
+              L'historique détaillé de vos points sera disponible prochainement.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal adresse */}
+      {modalAdresseOuverte && (
+        <div className="modal-overlay" onClick={() => setModalAdresseOuverte(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{adresseEnEdition ? "Modifier l'adresse" : "Nouvelle adresse"}</h3>
+              <button
+                className="modal-fermer"
+                onClick={() => setModalAdresseOuverte(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={soumettreAdresse} className="modal-form">
+              <div className="groupe-champ">
+                <label>Libellé *</label>
+                <input
+                  type="text"
+                  required
+                  value={formAdresse.label}
+                  onChange={(e) =>
+                    setFormAdresse((f) => ({ ...f, label: e.target.value }))
+                  }
+                  placeholder="Ex : Maison, Bureau..."
+                />
+              </div>
+              <div className="groupe-champ">
+                <label>Rue / Adresse *</label>
+                <input
+                  type="text"
+                  required
+                  value={formAdresse.rue}
+                  onChange={(e) =>
+                    setFormAdresse((f) => ({ ...f, rue: e.target.value }))
+                  }
+                  placeholder="Ex : Avenue Kennedy, N°42"
+                />
+              </div>
+              <div className="grille-2">
+                <div className="groupe-champ">
+                  <label>Ville *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formAdresse.ville}
+                    onChange={(e) =>
+                      setFormAdresse((f) => ({ ...f, ville: e.target.value }))
+                    }
+                    placeholder="Ex : Yaoundé"
+                  />
+                </div>
+                <div className="groupe-champ">
+                  <label>Quartier</label>
+                  <input
+                    type="text"
+                    value={formAdresse.quartier}
+                    onChange={(e) =>
+                      setFormAdresse((f) => ({
+                        ...f,
+                        quartier: e.target.value,
+                      }))
+                    }
+                    placeholder="Ex : Bastos"
+                  />
+                </div>
+              </div>
+              <div className="groupe-champ">
+                <label>Téléphone de contact</label>
+                <input
+                  type="tel"
+                  value={formAdresse.telephone}
+                  onChange={(e) =>
+                    setFormAdresse((f) => ({
+                      ...f,
+                      telephone: e.target.value,
+                    }))
+                  }
+                  placeholder="+237 6XX XXX XXX"
+                />
+              </div>
+              <div className="groupe-champ-check">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={formAdresse.estPrincipale}
+                    onChange={(e) =>
+                      setFormAdresse((f) => ({
+                        ...f,
+                        estPrincipale: e.target.checked,
+                      }))
+                    }
+                  />
+                  Définir comme adresse principale
+                </label>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="bouton-secondaire"
+                  onClick={() => setModalAdresseOuverte(false)}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="bouton-primaire"
+                  disabled={chargementAdresse}
+                >
+                  {chargementAdresse
+                    ? "En cours..."
+                    : adresseEnEdition
+                    ? "Enregistrer"
+                    : "Ajouter"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .page-profil { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 24px; }
+        .chargement { text-align: center; padding: 60px; color: #9ca3af; font-family: system-ui, sans-serif; }
+        .erreur-page { color: #dc2626; padding: 20px; font-family: system-ui, sans-serif; }
+
+        /* En-tête */
+        .profil-header {
+          background: #fff;
+          border-radius: 10px;
+          padding: 24px;
+          border: 1px solid #e5e7eb;
+          margin-bottom: 20px;
+        }
+        .avatar-bloc { display: flex; align-items: center; gap: 16px; }
+        .avatar {
+          width: 72px;
+          height: 72px;
+          border-radius: 50%;
+          background: #ff6b35;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 28px;
+          font-weight: 700;
+          color: #fff;
+          overflow: hidden;
+          flex-shrink: 0;
+        }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .header-nom { font-size: 20px; font-weight: 700; color: #111; margin: 0 0 4px; }
+        .header-email { font-size: 14px; color: #6b7280; margin: 0 0 6px; }
+        .header-points { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #374151; }
+        .points-icone { font-size: 16px; }
+
+        /* Messages */
+        .alerte {
+          padding: 12px 16px;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          font-size: 14px;
+          font-weight: 500;
+        }
+        .alerte.succes { background: #d1fae5; color: #065f46; }
+        .alerte.erreur-alerte { background: #fee2e2; color: #7f1d1d; }
+
+        /* Onglets */
+        .onglets-nav {
+          display: flex;
+          gap: 4px;
+          background: #f3f4f6;
+          padding: 4px;
+          border-radius: 10px;
+          margin-bottom: 20px;
+          overflow-x: auto;
+        }
+        .onglet-bouton {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 14px;
+          border: none;
+          border-radius: 7px;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          background: transparent;
+          color: #6b7280;
+          white-space: nowrap;
+          transition: all 0.15s;
+        }
+        .onglet-bouton:hover { background: rgba(255,255,255,0.7); color: #111; }
+        .onglet-bouton.actif { background: #fff; color: #111; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        /* Section card */
+        .section-card {
+          background: #fff;
+          border-radius: 10px;
+          padding: 24px;
+          border: 1px solid #e5e7eb;
+        }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .section-titre { font-size: 16px; font-weight: 700; color: #111; margin: 0 0 16px; }
+        .section-header .section-titre { margin: 0; }
+
+        /* Formulaires */
+        .grille-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+        .grille-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .groupe-champ { margin-bottom: 0; }
+        .groupe-champ label {
+          display: block;
+          font-size: 13px;
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 6px;
+        }
+        .groupe-champ input {
+          width: 100%;
+          padding: 9px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          font-size: 14px;
+          outline: none;
+          box-sizing: border-box;
+          transition: border-color 0.2s;
+        }
+        .groupe-champ input:focus { border-color: #ff6b35; }
+        .champ-desactive { background: #f9fafb !important; color: #9ca3af; cursor: not-allowed; }
+        .aide-champ { font-size: 12px; color: #9ca3af; margin-top: 4px; display: block; }
+
+        .groupe-champ-check { margin-top: 8px; }
+        .groupe-champ-check label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #374151; cursor: pointer; }
+        .groupe-champ-check input[type="checkbox"] { width: 16px; height: 16px; }
+
+        .actions-form { margin-top: 16px; display: flex; justify-content: flex-end; }
+
+        /* Adresses */
+        .vide-bloc { text-align: center; padding: 40px; color: #9ca3af; }
+        .vide-bloc p { margin-bottom: 14px; }
+        .liste-adresses { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+        .adresse-carte {
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 14px;
+          position: relative;
+        }
+        .adresse-carte.principale { border-color: #ff6b35; }
+        .badge-principale {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: #ff6b35;
+          color: #fff;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 20px;
+        }
+        .adresse-label { font-size: 14px; font-weight: 700; color: #111; margin-bottom: 6px; }
+        .adresse-detail { font-size: 13px; color: #374151; }
+        .adresse-ville { font-size: 13px; color: #6b7280; }
+        .adresse-tel { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+        .adresse-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+        /* Points */
+        .points-solde {
+          text-align: center;
+          padding: 32px;
+          background: linear-gradient(135deg, #fff7ed, #fff);
+          border-radius: 10px;
+          border: 2px solid #fdba74;
+          margin-bottom: 20px;
+        }
+        .points-valeur { font-size: 56px; font-weight: 800; color: #ff6b35; }
+        .points-unite { font-size: 16px; color: #9ca3af; }
+        .points-info { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+        .info-ligne { display: flex; gap: 12px; align-items: flex-start; padding: 12px; background: #f9fafb; border-radius: 8px; }
+        .info-icone { font-size: 20px; flex-shrink: 0; }
+        .info-titre { font-size: 14px; font-weight: 600; color: #111; margin-bottom: 2px; }
+        .info-desc { font-size: 13px; color: #6b7280; }
+        .points-historique { border-top: 1px solid #f3f4f6; padding-top: 16px; }
+        .historique-titre { font-size: 14px; font-weight: 600; color: #111; margin: 0 0 8px; }
+        .historique-vide { font-size: 13px; color: #9ca3af; }
+
+        /* Boutons */
+        .bouton-primaire {
+          background: #ff6b35;
+          color: #fff;
+          border: none;
+          padding: 9px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: opacity 0.15s;
+        }
+        .bouton-primaire:hover { opacity: 0.88; }
+        .bouton-primaire:disabled { opacity: 0.5; cursor: not-allowed; }
+        .bouton-secondaire {
+          background: #f3f4f6;
+          color: #374151;
+          border: none;
+          padding: 9px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+        .bouton-action {
+          padding: 5px 12px;
+          border: none;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: opacity 0.15s;
+        }
+        .bouton-action:hover { opacity: 0.8; }
+        .bouton-action.modifier { background: #eff6ff; color: #1d4ed8; }
+        .bouton-action.supprimer { background: #fee2e2; color: #7f1d1d; }
+
+        /* Modal */
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 100;
+        }
+        .modal {
+          background: #fff;
+          border-radius: 12px;
+          width: 480px;
+          max-width: 95vw;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 18px 22px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .modal-header h3 { margin: 0; font-size: 16px; font-weight: 700; }
+        .modal-fermer {
+          background: none;
+          border: none;
+          font-size: 18px;
+          cursor: pointer;
+          color: #9ca3af;
+        }
+        .modal-form { padding: 20px 22px; }
+        .modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          padding-top: 8px;
+        }
+      `}</style>
     </div>
   );
-};
-
-export default Profile;
+}

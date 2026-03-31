@@ -6,7 +6,7 @@ import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { useTranslation } from 'react-i18next';
 
 import { RootState, AppDispatch } from '@/store';
-import { fetchOrderById } from '@/store/slices-test/orderSlice';
+import { fetchOrderById } from '@/store/slices/orderSlice';
 import OrderStatus from '@/components/common/OrderStatus';
 import ShippingInfo from '@/components/common/ShippingInfo';
 import PaymentInfo from '@/components/common/PaymentInfo';
@@ -17,7 +17,7 @@ const AdminOrderDetail: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { t } = useTranslation();
 
-  const { currentOrder: order, loading, error } = useSelector((state: RootState) => state.orders);
+  const { selectedOrder: order, loading, error } = useSelector((state: RootState) => state.order);
 
   useEffect(() => {
     if (id) {

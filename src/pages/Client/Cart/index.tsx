@@ -1,348 +1,332 @@
-import React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Link, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faTrash, 
-  faArrowLeft, 
-  faCreditCard, 
-  faPlus, 
-  faMinus,
-  faShoppingBag,
-  faHeart,
-  faTruck,
-  faShield
-} from '@fortawesome/free-solid-svg-icons';
-import toast from 'react-hot-toast';
-
-import { RootState, AppDispatch } from '@/store';
+import { useDispatch, useSelector } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
+import { AppDispatch, RootState } from "@/store";
 import {
-  removeFromCart,
-  updateCartItemQuantity,
-  clearCart,
-} from '@/store/slices-test/cartSlice';
-import { addToWishlist, removeFromWishlist } from '@/store/slices-test/wishlistSlice';
-import { ROUTES } from '@/utils/url/url_frontend';
-import { Product } from '@/types';
+  retirerDuPanier,
+  modifierQuantite,
+  viderPanier,
+} from "@/store/slices/cartSlice";
+import { formatFCFA } from "@/utils/formatPrix";
 
-const Cart: React.FC = () => {
-  const { t } = useTranslation();
+export default function Cart() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { items, total } = useSelector((state: RootState) => state.cart);
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
-  const wishlistItems = useSelector((state: RootState) => state.wishlist.items);
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { items, chargement } = useSelector((state: RootState) => state.cart);
+  const { user } = useSelector((state: RootState) => state.auth);
 
-  const handleQuantityChange = (productId: string, newQuantity: number) => {
-    if (newQuantity < 1) return;
-    dispatch(updateCartItemQuantity({ productId, quantity: newQuantity }));
+  // Calcul du total en FCFA
+  const total = items.reduce(
+    (acc, item) => acc + (item.product?.price ?? 0) * item.quantity,
+    0
+  );
+
+  const gererRetrait = (productId: string) => {
+    dispatch(retirerDuPanier(productId));
   };
 
-  const handleRemoveItem = (productId: string, productName: string) => {
-    dispatch(removeFromCart(productId));
-    toast.success(t('cart.itemRemoved', '{{name}} retiré du panier', { name: productName }));
+  const gererQuantite = (productId: string, quantite: number) => {
+    if (quantite < 1) {
+      dispatch(retirerDuPanier(productId));
+    } else {
+      dispatch(modifierQuantite({ productId, quantite }));
+    }
   };
 
-  const handleAddToWishlist = (product: Product) => {
-    if (!isAuthenticated || !user?.id) {
-      toast.error(t('auth.loginRequired', 'Veuillez vous connecter pour ajouter aux favoris'));
-      navigate(ROUTES.PUBLIC.AUTH.LOGIN);
+  const gererCommande = () => {
+    if (!user) {
+      navigate("/connexion?redirect=/panier");
       return;
     }
-
-    const isInWishlist = wishlistItems.some(item => item?.product?.id === product?.id && item?.userId === user?.id);
-    
-    if (isInWishlist) {
-      const wishlistItem = wishlistItems.find(item => item?.product?.id === product?.id && item?.userId === user?.id);
-      if (wishlistItem) {
-        dispatch(removeFromWishlist(wishlistItem.id));
-      toast.success(t('wishlist.removeSuccess'));
-      }
-    } else {
-      dispatch(addToWishlist({ 
-        product, 
-        userId: user.id 
-      }));
-      toast.success(t('wishlist.addSuccess'));
-    }
+    navigate("/commande");
   };
-
-  const handleClearCart = () => {
-    if (window.confirm(t('cart.confirmClear', 'Êtes-vous sûr de vouloir vider le panier ?'))) {
-      dispatch(clearCart());
-      toast.success(t('cart.cartCleared', 'Panier vidé'));
-    }
-  };
-
-  const handleCheckout = () => {
-    if (isAuthenticated) {
-      navigate(ROUTES.USER.SHOPPING.CHECKOUT);
-    } else {
-      navigate(ROUTES.PUBLIC.AUTH.LOGIN + '?redirect=' + encodeURIComponent(ROUTES.USER.SHOPPING.CHECKOUT));
-    }
-  };
-
-  const shipping = total >= 50 ? 0 : 5.99;
-  const finalTotal = total + shipping;
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="bg-white rounded-3xl shadow-xl p-12">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-8">
-              <FontAwesomeIcon icon={faShoppingBag} className="text-gray-400 text-4xl" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              {t('cart.empty', 'Votre panier est vide')}
-            </h2>
-            <p className="text-xl text-gray-600 mb-8">
-              {t('cart.emptyDescription', 'Découvrez nos produits et commencez vos achats')}
-            </p>
-            <div className="space-y-4">
-              <Link
-                to={ROUTES.PUBLIC.CATALOG.PRODUCTS}
-                className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg"
-              >
-                <FontAwesomeIcon icon={faShoppingBag} className="mr-3" />
-                {t('cart.startShopping', 'Commencer mes achats')}
-              </Link>
-            </div>
-          </div>
-        </div>
+      <div className="panier-vide">
+        <div className="panier-vide-icone">🛒</div>
+        <h2>Votre panier est vide</h2>
+        <p>Découvrez nos produits et ajoutez-les à votre panier</p>
+        <Link to="/produits" className="bouton-primaire">
+          Parcourir les produits
+        </Link>
+
+        <style>{`
+          .panier-vide {
+            text-align: center;
+            padding: 80px 20px;
+            font-family: system-ui, sans-serif;
+          }
+          .panier-vide-icone { font-size: 64px; margin-bottom: 16px; }
+          .panier-vide h2 { font-size: 22px; font-weight: 700; color: #111; margin: 0 0 8px; }
+          .panier-vide p { color: #6b7280; margin-bottom: 24px; }
+          .bouton-primaire {
+            display: inline-block;
+            background: #ff6b35;
+            color: #fff;
+            padding: 11px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+          }
+        `}</style>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <Link
-              to={ROUTES.PUBLIC.CATALOG.PRODUCTS}
-              className="p-3 text-gray-600 hover:text-gray-900 hover:bg-white rounded-xl transition-all duration-200"
-            >
-              <FontAwesomeIcon icon={faArrowLeft} />
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {t('cart.title', 'Mon Panier')}
-              </h1>
-              <p className="text-gray-600 mt-1">
-                {items.length} {items.length === 1 ? t('cart.item', 'article') : t('cart.items', 'articles')}
-              </p>
+    <div className="page-panier">
+      <h1 className="page-titre">Mon panier ({items.length} article{items.length > 1 ? "s" : ""})</h1>
+
+      <div className="panier-grille">
+        {/* Liste des articles */}
+        <div className="panier-articles">
+          {items.map((item) => (
+            <div key={item.productId} className="article-carte">
+              <img
+                src={item.product!.images?.[0]?.url || "/placeholder.png"}
+                alt={item.product!.name}
+                className="article-image"
+              />
+              <div className="article-info">
+                <Link
+                  to={`/produits/${item.product!.slug}`}
+                  className="article-nom"
+                >
+                  {item.product!.name}
+                </Link>
+                <div className="article-vendeur">
+                  Par{" "}
+                  <Link to={`/companies/${item.product!.company?.slug}`}>
+                    {item.product!.company?.name}
+                  </Link>
+                </div>
+                {/* Prix unitaire en FCFA */}
+                <div className="article-prix">{formatFCFA(item.product!.price)}</div>
+              </div>
+              <div className="article-actions">
+                {/* Contrôle de quantité */}
+                <div className="controle-quantite">
+                  <button
+                    onClick={() => gererQuantite(item.productId, item.quantity - 1)}
+                    className="bouton-quantite"
+                  >
+                    −
+                  </button>
+                  <span className="quantite-valeur">{item.quantity}</span>
+                  <button
+                    onClick={() => gererQuantite(item.productId, item.quantity + 1)}
+                    className="bouton-quantite"
+                    disabled={item.quantity >= (item.product!.stock ?? Infinity)}
+                  >
+                    +
+                  </button>
+                </div>
+                {/* Sous-total en FCFA */}
+                <div className="article-sous-total">
+                  {formatFCFA(item.product!.price * item.quantity)}
+                </div>
+                <button
+                  className="bouton-retirer"
+                  onClick={() => gererRetrait(item.productId)}
+                >
+                  Supprimer
+                </button>
+              </div>
             </div>
-          </div>
-          
-          {items.length > 0 && (
-            <button
-              onClick={handleClearCart}
-              className="px-4 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-xl transition-colors"
-            >
-              {t('cart.clearCart', 'Vider le panier')}
-            </button>
-          )}
+          ))}
+
+          {/* Vider le panier */}
+          <button
+            className="bouton-vider"
+            onClick={() => dispatch(viderPanier())}
+          >
+            Vider le panier
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-4">
-            {items.map((item) => (
-              <div key={item.product?.id || ''} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200">
-                <div className="flex items-center space-x-6">
-                  {/* Product Image */}
-                  <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-xl overflow-hidden">
-                    <img
-                      src={item.product?.images?.[0].url}
-                      alt={item.product?.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+        {/* Résumé de commande */}
+        <div className="panier-resume">
+          <h2 className="resume-titre">Récapitulatif</h2>
 
-                  {/* Product Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <Link
-                          to={ROUTES.GENERATORS.getProductDetails(item.product?.id || '')}
-                          className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                        >
-                          {item.product?.name}
-                        </Link>
-                        <p className="text-gray-600 mt-1 text-sm line-clamp-2">
-                          {item.product?.description}
-                        </p>
-                        <p className="text-sm text-gray-500 mt-2">
-                          {t('product.category', 'Catégorie')}: {item.product?.category}
-                        </p>
-                      </div>
-                      
-                      <div className="text-right ml-4">
-                        <div className="text-xl font-bold text-gray-900">
-                          {(item.product?.price || 0 * item.quantity).toLocaleString('fr-FR', {
-                            style: 'currency',
-                            currency: 'EUR',
-                          })}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {item.product?.price?.toLocaleString('fr-FR', {
-                            style: 'currency',
-                            currency: 'EUR',
-                          })} / unité
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Quantity and Actions */}
-                    <div className="flex items-center justify-between mt-4">
-                      <div className="flex items-center space-x-3">
-                        <button
-                          onClick={() => handleQuantityChange(item.product?.id || '', item.quantity - 1)}
-                          disabled={item.quantity <= 1}
-                          className="w-10 h-10 rounded-xl border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          <FontAwesomeIcon icon={faMinus} className="text-sm" />
-                        </button>
-                        
-                        <span className="w-12 text-center font-semibold text-lg">
-                          {item.quantity}
-                        </span>
-                        
-                        <button
-                          onClick={() => handleQuantityChange(item.product?.id || '', item.quantity + 1)}
-                          className="w-10 h-10 rounded-xl border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
-                        >
-                          <FontAwesomeIcon icon={faPlus} className="text-sm" />
-                        </button>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <button
-                          onClick={() => item.product && handleAddToWishlist(item.product)}
-                          className={`p-2 rounded-xl transition-colors ${
-                            wishlistItems.some(wishlistItem => wishlistItem?.product?.id === item?.product?.id && wishlistItem?.userId === user?.id)
-                              ? 'text-red-500 hover:text-red-600 hover:bg-red-50'
-                              : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
-                          }`}
-                          title={wishlistItems.some(wishlistItem => wishlistItem?.product?.id === item?.product?.id && wishlistItem?.userId === user?.id)
-                            ? t('wishlist.removeFromWishlist')
-                            : t('cart.addToWishlist')
-                          }
-                        >
-                          <FontAwesomeIcon icon={faHeart} />
-                        </button>
-                        
-                        <button
-                          onClick={() => handleRemoveItem(item.product?.id || '', item.product?.name || '')}
-                          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                          title={t('cart.remove', 'Supprimer')}
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="resume-lignes">
+            <div className="resume-ligne">
+              <span>Sous-total</span>
+              <span>{formatFCFA(total)}</span>
+            </div>
+            <div className="resume-ligne">
+              <span>Livraison</span>
+              <span className="gratuit">À définir</span>
+            </div>
+            <div className="resume-ligne total">
+              <span>Total</span>
+              <span>{formatFCFA(total)}</span>
+            </div>
           </div>
 
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-8">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">
-                {t('checkout.orderSummary', 'Récapitulatif de la commande')}
-              </h3>
-
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between text-gray-600">
-                  <span>{t('cart.subtotal', 'Sous-total')}</span>
-                  <span>
-                    {total.toLocaleString('fr-FR', {
-                      style: 'currency',
-                      currency: 'EUR',
-                    })}
-                  </span>
-                </div>
-                
-                <div className="flex justify-between text-gray-600">
-                  <span className="flex items-center">
-                    <FontAwesomeIcon icon={faTruck} className="mr-2" />
-                    {t('cart.shipping', 'Livraison')}
-                  </span>
-                  <span>
-                    {shipping === 0 ? (
-                      <span className="text-green-600 font-medium">
-                        {t('cart.freeShipping', 'Gratuite')}
-                      </span>
-                    ) : (
-                      shipping.toLocaleString('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR',
-                      })
-                    )}
-                  </span>
-                </div>
-
-                {shipping > 0 && (
-                  <div className="bg-blue-50 p-3 rounded-xl">
-                    <p className="text-sm text-blue-600">
-                      {t('cart.freeShippingInfo', 'Livraison gratuite dès 50€ d\'achat')}
-                    </p>
-                  </div>
-                )}
-
-                <div className="border-t border-gray-200 pt-4">
-                  <div className="flex justify-between text-lg font-semibold text-gray-900">
-                    <span>{t('cart.total', 'Total')}</span>
-                    <span>
-                      {finalTotal.toLocaleString('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR',
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Security Info */}
-              <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                <div className="flex items-center text-sm text-gray-600">
-                  <FontAwesomeIcon icon={faShield} className="mr-2 text-green-500" />
-                  {t('cart.securePayment', 'Paiement 100% sécurisé')}
-                </div>
-              </div>
-
-              {/* Checkout Button */}
-              <button
-                onClick={handleCheckout}
-                className="w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg"
-              >
-                <FontAwesomeIcon icon={faCreditCard} className="mr-3" />
-                {isAuthenticated
-                  ? t('cart.checkout', 'Passer la commande')
-                  : t('cart.loginToCheckout', 'Se connecter pour commander')
-                }
-              </button>
-
-              <div className="mt-4 text-center">
-                <Link
-                  to={ROUTES.PUBLIC.CATALOG.PRODUCTS}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
-                  {t('cart.continueShopping', 'Continuer mes achats')}
-                </Link>
+          {/* Paiement à la livraison */}
+          <div className="info-paiement">
+            <span className="paiement-icone">💵</span>
+            <div>
+              <div className="paiement-titre">Paiement à la livraison</div>
+              <div className="paiement-desc">
+                Payez en espèces lors de la réception de votre commande
               </div>
             </div>
           </div>
+
+          <button
+            className="bouton-commander"
+            onClick={gererCommande}
+            disabled={chargement}
+          >
+            {user ? "Passer la commande" : "Se connecter pour commander"}
+          </button>
+
+          <Link to="/produits" className="lien-continuer">
+            Continuer les achats
+          </Link>
         </div>
       </div>
+
+      <style>{`
+        .page-panier { font-family: system-ui, sans-serif; max-width: 1100px; margin: 0 auto; padding: 24px; }
+        .page-titre { font-size: 24px; font-weight: 700; color: #111; margin: 0 0 24px; }
+
+        .panier-grille { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
+        @media (max-width: 900px) { .panier-grille { grid-template-columns: 1fr; } }
+
+        .panier-articles { display: flex; flex-direction: column; gap: 16px; }
+
+        .article-carte {
+          display: flex;
+          gap: 16px;
+          background: #fff;
+          border-radius: 10px;
+          padding: 16px;
+          border: 1px solid #e5e7eb;
+          align-items: flex-start;
+        }
+        .article-image { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+        .article-info { flex: 1; min-width: 0; }
+        .article-nom {
+          font-size: 15px;
+          font-weight: 600;
+          color: #111;
+          text-decoration: none;
+          display: block;
+          margin-bottom: 4px;
+        }
+        .article-nom:hover { color: #ff6b35; }
+        .article-vendeur { font-size: 13px; color: #9ca3af; margin-bottom: 6px; }
+        .article-vendeur a { color: #6b7280; text-decoration: none; }
+        .article-vendeur a:hover { color: #ff6b35; }
+        .article-prix { font-size: 15px; font-weight: 600; color: #ff6b35; }
+
+        .article-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+
+        .controle-quantite { display: flex; align-items: center; gap: 8px; }
+        .bouton-quantite {
+          width: 30px; height: 30px;
+          border: 1px solid #d1d5db;
+          background: #f9fafb;
+          border-radius: 6px;
+          font-size: 16px;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          transition: border-color 0.15s;
+        }
+        .bouton-quantite:hover:not(:disabled) { border-color: #ff6b35; }
+        .bouton-quantite:disabled { opacity: 0.4; cursor: not-allowed; }
+        .quantite-valeur { font-size: 15px; font-weight: 600; min-width: 20px; text-align: center; }
+
+        .article-sous-total { font-size: 15px; font-weight: 700; color: #111; }
+
+        .bouton-retirer {
+          background: none;
+          border: none;
+          color: #dc2626;
+          font-size: 12px;
+          cursor: pointer;
+          padding: 2px 0;
+          text-decoration: underline;
+        }
+
+        .bouton-vider {
+          align-self: flex-start;
+          background: none;
+          border: 1px solid #d1d5db;
+          color: #6b7280;
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .bouton-vider:hover { border-color: #dc2626; color: #dc2626; }
+
+        /* Résumé */
+        .panier-resume {
+          background: #fff;
+          border-radius: 10px;
+          padding: 20px;
+          border: 1px solid #e5e7eb;
+          height: fit-content;
+          position: sticky;
+          top: 20px;
+        }
+        .resume-titre { font-size: 17px; font-weight: 700; color: #111; margin: 0 0 16px; }
+        .resume-lignes { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+        .resume-ligne {
+          display: flex;
+          justify-content: space-between;
+          font-size: 14px;
+          color: #374151;
+          padding-bottom: 10px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+        .resume-ligne:last-child { border-bottom: none; }
+        .resume-ligne.total { font-size: 16px; font-weight: 700; color: #111; }
+        .gratuit { color: #059669; font-weight: 600; }
+
+        .info-paiement {
+          display: flex;
+          gap: 10px;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 16px;
+          align-items: flex-start;
+        }
+        .paiement-icone { font-size: 20px; flex-shrink: 0; }
+        .paiement-titre { font-size: 13px; font-weight: 600; color: #065f46; }
+        .paiement-desc { font-size: 12px; color: #059669; margin-top: 2px; }
+
+        .bouton-commander {
+          width: 100%;
+          background: #ff6b35;
+          color: #fff;
+          border: none;
+          padding: 13px;
+          border-radius: 8px;
+          font-size: 15px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: opacity 0.15s;
+          margin-bottom: 10px;
+        }
+        .bouton-commander:hover { opacity: 0.88; }
+        .bouton-commander:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .lien-continuer {
+          display: block;
+          text-align: center;
+          color: #6b7280;
+          font-size: 13px;
+          text-decoration: none;
+        }
+        .lien-continuer:hover { color: #ff6b35; }
+      `}</style>
     </div>
   );
-};
-
-export default Cart;
+}

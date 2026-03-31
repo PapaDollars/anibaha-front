@@ -1,179 +1,307 @@
-import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useParams, Link } from "react-router-dom";
+import { AppDispatch, RootState } from "@/store";
+import { fetchOrderById } from "@/store/slices/orderSlice";
+import { formatFCFA } from "@/utils/formatPrix";
 
-import { RootState, AppDispatch } from '@/store';
-import { fetchOrderById } from '@/store/slices-test/orderSlice';
-import { ROUTES } from '@/utils/url/url_frontend';
-import OrderStatus from '@/components/common/OrderStatus';
-import ShippingInfo from '@/components/common/ShippingInfo'; 
-import PaymentInfo from '@/components/common/PaymentInfo';
+const STATUTS: Record<string, { label: string; couleur: string; fond: string }> = {
+  pending:    { label: "En attente",    couleur: "#92400e", fond: "#fef3c7" },
+  confirmed:  { label: "Confirmée",     couleur: "#1d4ed8", fond: "#eff6ff" },
+  processing: { label: "En traitement", couleur: "#6d28d9", fond: "#f5f3ff" },
+  shipped:    { label: "Expédiée",      couleur: "#0369a1", fond: "#e0f2fe" },
+  delivered:  { label: "Livrée",        couleur: "#065f46", fond: "#d1fae5" },
+  cancelled:  { label: "Annulée",       couleur: "#7f1d1d", fond: "#fee2e2" },
+  refunded:   { label: "Remboursée",    couleur: "#374151", fond: "#f3f4f6" },
+};
 
-const OrderDetail: React.FC = () => {
-  const { t } = useTranslation();
-  const dispatch = useDispatch<AppDispatch>();
-  const navigate = useNavigate();
+export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
-  const { currentOrder: order, loading, error } = useSelector((state: RootState) => state.orders);
+  const dispatch = useDispatch<AppDispatch>();
+
+  const { selectedOrder: commande, chargement, error } = useSelector(
+    (state: RootState) => state.order
+  );
 
   useEffect(() => {
     if (id) {
       dispatch(fetchOrderById(id));
     }
-  }, [dispatch, id]);
+  }, [id, dispatch]);
 
-  if (loading) {
+  if (chargement) {
+    return <div className="chargement">Chargement de la commande...</div>;
+  }
+
+  if (error || !commande) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex justify-center items-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">{t('common.loading', 'Chargement...')}</p>
-        </div>
+      <div className="erreur-page">
+        <p>{error || "Commande introuvable"}</p>
+        <Link to="/user/orders" className="lien-retour">
+          ← Retour à mes commandes
+        </Link>
       </div>
     );
   }
 
-  if (error || !order) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              {t('orders.notFound', 'Commande non trouvée')}
-            </h2>
-            <p className="text-gray-600 mb-8">
-              {t('orders.notFoundDescription', 'La commande que vous recherchez n\'existe pas ou a été supprimée.')}
-            </p>
-            <button
-              onClick={() => navigate(ROUTES.USER.ORDERS.LIST)}
-              className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-            >
-              <FontAwesomeIcon icon={faArrowLeft} />
-              <span>{t('navigation.backToOrders', 'Retour aux commandes')}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const statut = STATUTS[commande.status] || {
+    label: commande.status,
+    couleur: "#374151",
+    fond: "#f3f4f6",
+  };
+
+  const totals = commande.totals;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <Link
-              to={ROUTES.USER.ORDERS.LIST}
-              className="p-3 text-gray-600 hover:text-gray-900 hover:bg-white rounded-xl transition-all duration-200"
-            >
-              <FontAwesomeIcon icon={faArrowLeft} />
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {t('orders.details.title', 'Détails de la commande')}
-              </h1>
-              <p className="text-gray-600 mt-1">
-                {t('orders.orderNumber', 'Commande')} #{order.orderNumber}
-              </p>
-            </div>
-          </div>
+    <div className="page-detail">
+      {/* Fil d'Ariane */}
+      <nav className="fil-ariane">
+        <Link to="/user/orders">Mes commandes</Link>
+        <span className="sep">›</span>
+        <span className="actif">
+          Commande #{commande.id.slice(-8).toUpperCase()}
+        </span>
+      </nav>
+
+      {/* En-tête */}
+      <div className="detail-header">
+        <div>
+          <h1 className="detail-titre">
+            Commande #{commande.id.slice(-8).toUpperCase()}
+          </h1>
+          <p className="detail-date">
+            Passée le{" "}
+            {new Date(commande.createdAt).toLocaleDateString("fr-FR", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
         </div>
+        <span
+          className="badge-statut"
+          style={{ color: statut.couleur, background: statut.fond }}
+        >
+          {statut.label}
+        </span>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Order Info */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Order Status */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <OrderStatus status={order.status} className="text-xl" />
-            </div>
-
-            {/* Shipping Info */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <ShippingInfo address={order.shippingAddress} />
-            </div>
-
-            {/* Payment Info */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <PaymentInfo method={order.payment.method} total={order.totals?.total ?? 0} />
-            </div>
-          </div>
-
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-8">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">
-                {t('orders.details.orderItems', 'Articles commandés')}
-              </h3>
-
-              <div className="space-y-4">
-                {order.items.map((item) => (
-                  <div key={item.id} className="flex items-center space-x-4">
-                    <img
-                      src={item.product?.images[0].url}
-                      alt={item.product?.name}
-                      className="w-16 h-16 object-cover rounded-lg"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/images/placeholder.png';
-                      }}
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{item.product?.name}</h4>
-                      <p className="text-sm text-gray-500">
-                        {t('orders.details.quantity', 'Quantité')}: {item.quantity}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {t('orders.details.price', 'Prix')}: {item.product?.price.toLocaleString('fr-FR', {
-                          style: 'currency',
-                          currency: 'EUR',
-                        })}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900">
-                        {item.product?.price && (item.product.price * item.quantity).toLocaleString('fr-FR', {
-                          style: 'currency',
-                          currency: 'EUR',
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-
-                <div className="border-t border-gray-200 pt-4 space-y-2">
-                  <div className="flex justify-between text-gray-600">
-                    <span>{t('orders.details.subtotal', 'Sous-total')}</span>
-                    <span>
-                      {(order.totals?.total ?? 0).toLocaleString('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR',
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-gray-600">
-                    <span>{t('orders.details.shipping', 'Livraison')}</span>
-                    <span>5.99 €</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-semibold text-gray-900 pt-2 border-t border-gray-200">
-                    <span>{t('orders.details.total', 'Total')}</span>
-                    <span>
-                      {(order.totals?.total ?? 0 + 5.99).toLocaleString('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR',
-                      })}
-                    </span>
+      <div className="detail-corps">
+        {/* Articles */}
+        <div className="section-card">
+          <h2 className="section-titre">Articles commandés</h2>
+          <div className="liste-articles">
+            {commande.items?.map((item: any) => (
+              <div key={item.id} className="article-ligne">
+                <img
+                  src={item.product?.images?.[0]?.url || "/placeholder.png"}
+                  alt={item.product?.name}
+                  className="article-img"
+                />
+                <div className="article-info">
+                  <div className="article-nom">{item.product?.name}</div>
+                  {item.variant && (
+                    <div className="article-variante">{item.variant.name}</div>
+                  )}
+                  <div className="article-pu">
+                    {formatFCFA(item.unitPrice ?? item.price ?? 0)} × {item.quantity}
                   </div>
                 </div>
+                <div className="article-total">
+                  {formatFCFA((item.unitPrice ?? item.price ?? 0) * item.quantity)}
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
+
+        {/* Résumé + Adresse */}
+        <div className="detail-lateral">
+          {/* Récapitulatif financier */}
+          <div className="section-card">
+            <h2 className="section-titre">Récapitulatif</h2>
+            <div className="recap-ligne">
+              <span>Sous-total</span>
+              <span>{formatFCFA(totals?.subtotal ?? 0)}</span>
+            </div>
+            {totals?.tax !== undefined && totals.tax > 0 && (
+              <div className="recap-ligne">
+                <span>Taxes ({totals.taxRate ?? 0}%)</span>
+                <span>{formatFCFA(totals.tax)}</span>
+              </div>
+            )}
+            <div className="recap-ligne">
+              <span>Livraison</span>
+              <span>
+                {totals?.shipping === 0
+                  ? "Gratuite"
+                  : formatFCFA(totals?.shipping ?? 0)}
+              </span>
+            </div>
+            <div className="recap-ligne total">
+              <span>Total</span>
+              <span>{formatFCFA(totals?.total ?? 0)}</span>
+            </div>
+            <div className="paiement-mode">
+              <span className="paiement-icone">💵</span>
+              <span>Espèces à la livraison</span>
+            </div>
+          </div>
+
+          {/* Adresse de livraison */}
+          {commande.shippingAddress && (
+            <div className="section-card">
+              <h2 className="section-titre">Adresse de livraison</h2>
+              <div className="adresse-bloc">
+                <div className="adresse-label">
+                  {commande.shippingAddress.firstName} {commande.shippingAddress.lastName}
+                </div>
+                <div className="adresse-detail">
+                  {commande.shippingAddress.street}
+                </div>
+                {commande.shippingAddress.region && (
+                  <div className="adresse-detail">
+                    {commande.shippingAddress.region}
+                  </div>
+                )}
+                <div className="adresse-detail">
+                  {commande.shippingAddress.city}
+                  {commande.shippingAddress.postalCode && `, ${commande.shippingAddress.postalCode}`}
+                </div>
+                {commande.shippingAddress.phone && (
+                  <div className="adresse-tel">
+                    📞 {commande.shippingAddress.phone}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Suivi */}
+          {commande.shipping?.trackingNumber && (
+            <div className="section-card">
+              <h2 className="section-titre">Suivi</h2>
+              <p className="tracking">
+                N° de suivi : <strong>{commande.shipping.trackingNumber}</strong>
+              </p>
+            </div>
+          )}
+        </div>
       </div>
+
+      <style>{`
+        .page-detail { font-family: system-ui, sans-serif; max-width: 1000px; margin: 0 auto; padding: 24px; }
+        .chargement { text-align: center; padding: 60px; color: #9ca3af; font-family: system-ui, sans-serif; }
+        .erreur-page { text-align: center; padding: 60px; font-family: system-ui, sans-serif; color: #6b7280; }
+        .lien-retour { display: inline-block; margin-top: 12px; color: #ff6b35; text-decoration: none; font-weight: 500; }
+
+        /* Fil d'ariane */
+        .fil-ariane { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #9ca3af; margin-bottom: 20px; }
+        .fil-ariane a { color: #6b7280; text-decoration: none; }
+        .fil-ariane a:hover { color: #ff6b35; }
+        .fil-ariane .actif { color: #111; font-weight: 500; }
+        .sep { color: #d1d5db; }
+
+        /* En-tête */
+        .detail-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          background: #fff;
+          border-radius: 10px;
+          padding: 20px 24px;
+          border: 1px solid #e5e7eb;
+          margin-bottom: 24px;
+        }
+        .detail-titre { font-size: 20px; font-weight: 700; color: #111; margin: 0 0 4px; }
+        .detail-date { font-size: 13px; color: #9ca3af; margin: 0; }
+        .badge-statut {
+          font-size: 13px;
+          font-weight: 600;
+          padding: 5px 12px;
+          border-radius: 20px;
+          white-space: nowrap;
+        }
+
+        /* Corps */
+        .detail-corps {
+          display: grid;
+          grid-template-columns: 1fr 300px;
+          gap: 20px;
+          align-items: start;
+        }
+        @media (max-width: 768px) { .detail-corps { grid-template-columns: 1fr; } }
+
+        /* Cards */
+        .section-card {
+          background: #fff;
+          border-radius: 10px;
+          padding: 20px;
+          border: 1px solid #e5e7eb;
+          margin-bottom: 16px;
+        }
+        .section-card:last-child { margin-bottom: 0; }
+        .section-titre { font-size: 15px; font-weight: 700; color: #111; margin: 0 0 14px; }
+
+        /* Articles */
+        .liste-articles { display: flex; flex-direction: column; gap: 12px; }
+        .article-ligne {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+        .article-ligne:last-child { border-bottom: none; padding-bottom: 0; }
+        .article-img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+        .article-info { flex: 1; }
+        .article-nom { font-size: 14px; font-weight: 600; color: #111; }
+        .article-variante { font-size: 12px; color: #9ca3af; }
+        .article-pu { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .article-total { font-size: 15px; font-weight: 700; color: #ff6b35; white-space: nowrap; }
+
+        /* Récapitulatif */
+        .recap-ligne {
+          display: flex;
+          justify-content: space-between;
+          font-size: 14px;
+          color: #374151;
+          padding: 6px 0;
+          border-bottom: 1px solid #f3f4f6;
+        }
+        .recap-ligne:last-of-type { border-bottom: none; }
+        .recap-ligne.total {
+          font-size: 16px;
+          font-weight: 700;
+          color: #111;
+          padding-top: 10px;
+          border-top: 2px solid #e5e7eb;
+          border-bottom: none;
+          margin-top: 4px;
+        }
+        .recap-ligne.total span:last-child { color: #ff6b35; }
+        .paiement-mode {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 12px;
+          font-size: 13px;
+          color: #6b7280;
+        }
+        .paiement-icone { font-size: 16px; }
+
+        /* Adresse */
+        .adresse-bloc { font-size: 14px; }
+        .adresse-label { font-weight: 600; color: #111; margin-bottom: 4px; }
+        .adresse-detail { color: #374151; }
+        .adresse-tel { color: #9ca3af; font-size: 13px; margin-top: 4px; }
+
+        /* Suivi */
+        .tracking { font-size: 14px; color: #374151; }
+
+        /* Lateral */
+        .detail-lateral { display: flex; flex-direction: column; }
+      `}</style>
     </div>
   );
-};
-
-export default OrderDetail; 
+}

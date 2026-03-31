@@ -15,7 +15,8 @@ const Login: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, loading, error, user } = useSelector((state: RootState) => state.auth);
+  const { loading, error, user } = useSelector((state: RootState) => state.auth);
+  const isAuthenticated = !!user;
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});

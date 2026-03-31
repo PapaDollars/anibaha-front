@@ -2,9 +2,9 @@ export const BASENAME = '/';
 // export const BASENAME = '/emergent-market';
 
 const BASE_PUBLIC = '/app';
-const BASE_CLIENT = 'user';
-const BASE_COMPANY = 'company';
-const BASE_SUPER_ADMIN = 'super-admin';
+const BASE_CLIENT = '/user';
+export const BASE_COMPANY = '/company';
+export const BASE_SUPER_ADMIN = '/super-admin';
 
 
 export const PUBLIC_ROUTES = {
@@ -93,7 +93,7 @@ export const COMPANY_ROUTES = {
   },
 
   PRODUCTS: {
-    LIST: `${BASE_COMPANY}/products/:id`,
+    LIST: `${BASE_COMPANY}/products`,
     CREATE: `${BASE_COMPANY}/products/create`,
     EDIT: `${BASE_COMPANY}/products/:id/edit`,
     DETAILS: `${BASE_COMPANY}/products/:id/:slug`,
@@ -357,6 +357,11 @@ export type PublicRoute = typeof PUBLIC_ROUTES[keyof typeof PUBLIC_ROUTES];
 export type ClientRoute = typeof USER_ROUTES[keyof typeof USER_ROUTES];
 export type CompanyRoute = typeof COMPANY_ROUTES[keyof typeof COMPANY_ROUTES];
 export type SuperAdminRoute = typeof SUPER_ADMIN_ROUTES[keyof typeof SUPER_ADMIN_ROUTES];
+
+// Convertit un chemin absolu en chemin relatif par rapport à un parent
+export const toRelative = (path: string, parent: string): string => {
+  return path.replace(`${parent}/`, '');
+};
 
 // Export par défaut
 export default ROUTES;

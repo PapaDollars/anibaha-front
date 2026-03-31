@@ -7,7 +7,7 @@ import { faSave, faArrowLeft, faUpload } from '@fortawesome/free-solid-svg-icons
 import toast from 'react-hot-toast';
 
 import { RootState, AppDispatch } from '@/store';
-import { createProduct, updateProduct, fetchProductById } from '@/store/slices-test/productSlice';
+import { createProduct, updateProduct, fetchProductById } from '@/store/slices/productSlice';
 import { categories } from '@/data/categories';
 import { ROUTES } from '@/utils/url/url_frontend';
 

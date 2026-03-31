@@ -12,8 +12,8 @@ import {
   faRedo
 } from '@fortawesome/free-solid-svg-icons';
 
-import { RootState } from '@/store/store';
-import { forgotPassword } from '@/store/slices-test/authSlice';
+import { RootState } from '@/store';
+import { forgotPassword } from '@/store/slices/authSlice';
 import { ROUTES } from '@/utils/url/url_frontend';
 
 const ForgotPassword: React.FC = () => {

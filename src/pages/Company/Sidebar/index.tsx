@@ -16,7 +16,7 @@ import {
 import toast from 'react-hot-toast';
 
 import { RootState, AppDispatch } from '@/store';
-import { fetchUsers, deleteUser } from '@/store/slices-test/userSlice';
+import { fetchUsers, deleteUser } from '@/store/slices/userSlice';
 import { ROUTES } from '@/utils/url/url_frontend';
 
 const AdminUsers: React.FC = () => {

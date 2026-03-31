@@ -21,17 +21,12 @@ import {
   faTwitter
 } from '@fortawesome/free-brands-svg-icons';
 import { RootState, AppDispatch } from '@/store';
-import {
-  fetchBrands,
-  selectCompanies,
-  selectCompanyLoading,
-  selectCompanyError
-} from '@/store/slices-test/brandSlice';
+import { fetchBrands } from '@/store/slices/brandSlice';
 // Corrected imports to use the new modular components
 import { ProductCard } from '@/components/common/cards/product-card';
 import { CompanyCard } from '@/components/common/cards/company-card';
-import { addToCart } from '@/store/slices-test/cartSlice';
-import { addToWishlist, removeFromWishlist } from '@/store/slices-test/wishlistSlice';
+import { addToCart } from '@/store/slices/cartSlice';
+import { ajouterWishlist, retirerWishlist } from '@/store/slices/wishlistSlice';
 import { Product } from '@/types/product';
 import { Company } from '@/types/company';
 import { ROUTES } from '@/utils/url/url_frontend';
@@ -39,9 +34,8 @@ import { ROUTES } from '@/utils/url/url_frontend';
 const Companys: React.FC = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
-  const companies: Company[] = useSelector(selectCompanies) ?? [];
-  const loading = useSelector(selectCompanyLoading) ?? false;
-  const error = useSelector(selectCompanyError) ?? null;
+  const { brands: companies, chargement: loading, erreur: error } = useSelector((state: RootState) => state.brand);
+
 
   // Redux state for cart and wishlist
   const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
@@ -52,7 +46,7 @@ const Companys: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
-    dispatch(fetchBrands());
+    dispatch(fetchBrands({}));
   }, [dispatch]);
 
   const filteredCompanies = companies.filter(company =>
@@ -60,38 +54,33 @@ const Companys: React.FC = () => {
     (company.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
   );
 
-  const selectedCompanyData = selectedCompany
+  const selectedCompanyData: any = selectedCompany
     ? companies.find(company => company.id === selectedCompany)
     : null;
 
-  // Adapt Company for CompanyCard (dummy/fallback for missing fields)
-  const adaptCompanyForCard = (company: Company) => ({
+  // Adapt Brand for CompanyCard (dummy/fallback for missing fields)
+  const adaptCompanyForCard = (company: any) => ({
     id: company.id,
     name: company.name,
     logo: company.logo || '/placeholder-logo.jpg',
-    rating: typeof company.settings === 'object' && 'rating' in company.settings ? (company.settings as any).rating : 4.5,
-    products: Array.isArray((company as any).products) ? (company as any).products.length : 0,
-    verified: company.isVerified,
-    location: company.businessInfo?.industry || '',
-    followers: (company as any).followers || 0,
-    category: (company as any).category || 'Entreprise',
+    rating: 4.5,
+    products: company._count?.products ?? 0,
+    verified: false,
+    location: '',
+    followers: 0,
+    category: 'Entreprise',
   });
 
-  // Enhanced product card handlers
-  const handleAddToCart = (product: Product, quantity: number) => {
-    dispatch(addToCart({ product, quantity }));
-  };
-
-  const handleAddToWishlist = (product: Product) => {
-    dispatch(addToWishlist({ product, userId: user?.id || '' }));
+  const handleAddToWishlist = (product: any) => {
+    dispatch(ajouterWishlist(product.id));
   };
 
   const handleRemoveFromWishlist = (productId: string) => {
-    dispatch(removeFromWishlist(productId));
+    dispatch(retirerWishlist(productId));
   };
 
   const isInWishlist = (productId: string) => {
-    return wishlistItems.some(item => item?.product?.id === productId && item?.userId === user?.id);
+    return wishlistItems.some(item => item?.product?.id === productId);
   };
 
   const handleFollow = (companyId: string) => {

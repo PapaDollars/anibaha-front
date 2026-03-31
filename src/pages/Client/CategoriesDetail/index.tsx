@@ -1,194 +1,262 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faStar, faSearch, faBox } from '@fortawesome/free-solid-svg-icons';
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useParams, Link } from "react-router-dom";
+import { AppDispatch, RootState } from "@/store";
+import { fetchCategoryById } from "@/store/slices/categorySlice";
+import { fetchProducts } from "@/store/slices/productSlice";
+import { formatFCFA } from "@/utils/formatPrix";
 
-import { ROUTES } from '@/utils/url/url_frontend';
-import { categories } from '@/data/categories';
-import { products } from '@/data/products';
-
-const CategoryDetail: React.FC = () => {
-  const { t } = useTranslation();
+export default function CategoryDetail() {
   const { id } = useParams<{ id: string }>();
-  const [searchTerm, setSearchTerm] = useState('');
+  const dispatch = useDispatch<AppDispatch>();
 
-  // Recherche de la catégorie par id ou slug
-  const category = categories.find(c => c.id === id || c.slug === id);
-
-  // Produits appartenant à cette catégorie
-  const categoryProducts = products.filter(
-    p => p.category === category?.slug || p.category === category?.id
+  const { selectedCategory: categorie, loading: chargementCat } = useSelector(
+    (state: RootState) => state.category
+  );
+  const { products, loading: chargementProduits } = useSelector(
+    (state: RootState) => state.product
   );
 
-  // Filtrage selon la recherche
-  const filteredProducts = categoryProducts.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  const [recherche, setRecherche] = useState("");
+
+  useEffect(() => {
+    if (id) {
+      dispatch(fetchCategoryById(id));
+      dispatch(fetchProducts({ category: id }));
+    }
+  }, [id, dispatch]);
+
+  const produitsFiltres = products.filter((p) =>
+    p.name.toLowerCase().includes(recherche.toLowerCase()) ||
+    p.description?.toLowerCase().includes(recherche.toLowerCase())
   );
 
-  // Catégorie introuvable
-  if (!category) {
+  const chargement = chargementCat || chargementProduits;
+
+  if (chargement && !categorie) {
+    return <div className="chargement">Chargement...</div>;
+  }
+
+  if (!categorie) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center bg-white rounded-2xl shadow-lg p-12 max-w-md mx-auto">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <FontAwesomeIcon icon={faBox} className="text-gray-400 text-3xl" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">
-            {t('categories.notFound', 'Catégorie introuvable')}
-          </h2>
-          <p className="text-gray-500 mb-6">
-            {t('categories.notFoundDesc', "Cette catégorie n'existe pas ou a été supprimée.")}
-          </p>
-          <Link
-            to={ROUTES.PUBLIC.CATALOG.CATEGORIES}
-            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
-          >
-            <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-            {t('categories.backToList', 'Voir toutes les catégories')}
+      <div className="page-categorie">
+        <div className="introuvable">
+          <div className="introuvable-icone">📦</div>
+          <h2>Catégorie introuvable</h2>
+          <p>Cette catégorie n'existe pas ou a été supprimée.</p>
+          <Link to="/categories" className="bouton-retour">
+            ← Voir toutes les catégories
           </Link>
         </div>
+        <style>{`.page-categorie{font-family:system-ui,sans-serif;max-width:1200px;margin:0 auto;padding:24px}.introuvable{text-align:center;padding:60px 20px}.introuvable-icone{font-size:56px;margin-bottom:16px}.introuvable h2{font-size:20px;font-weight:700;color:#111;margin:0 0 8px}.introuvable p{color:#6b7280;margin-bottom:20px}.bouton-retour{display:inline-block;background:#ff6b35;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:600}`}</style>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="page-categorie">
+      {/* Fil d'Ariane */}
+      <nav className="fil-ariane">
+        <Link to="/">Accueil</Link>
+        <span className="sep">›</span>
+        <Link to="/categories">Catégories</Link>
+        <span className="sep">›</span>
+        <span className="actif">{categorie.name}</span>
+      </nav>
 
-        {/* Bouton retour vers la liste des catégories */}
-        <Link
-          to={ROUTES.PUBLIC.CATALOG.CATEGORIES}
-          className="inline-flex items-center text-blue-600 hover:text-blue-700 my-6 transition-colors duration-200"
-        >
-          <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-          <span>{t('categories.backToList', 'Retour aux catégories')}</span>
-        </Link>
-
-        {/* Bannière de la catégorie */}
-        <div className="relative rounded-2xl overflow-hidden shadow-xl mb-8 h-56">
-          {category.image ? (
-            <img
-              src={category.image}
-              alt={category.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-              <span className="text-8xl">{category.icon}</span>
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-8">
-            <div className="flex items-center space-x-3 mb-2">
-              <span className="text-4xl">{category.icon}</span>
-              <h1 className="text-4xl font-bold text-white">{category.name}</h1>
-              {category.featured && (
-                <FontAwesomeIcon icon={faStar} className="text-yellow-400 text-2xl" />
-              )}
-            </div>
-            {category.description && (
-              <p className="text-white/90 text-lg max-w-2xl">{category.description}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Barre de recherche + compteur de résultats */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-          <p className="text-gray-600 text-lg">
-            <span className="font-semibold text-gray-900">{filteredProducts.length}</span>{' '}
-            {t('categories.productsFound', 'produit(s) trouvé(s)')}
-          </p>
-          <div className="relative">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t('products.searchPlaceholder', 'Rechercher un produit...')}
-              className="w-full md:w-80 px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
-            />
-            <FontAwesomeIcon
-              icon={faSearch}
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
-          </div>
-        </div>
-
-        {/* Grille de produits */}
-        {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map(product => (
-              <Link
-                key={product.id}
-                to={`/products/${product.id}`}
-                className="group bg-white rounded-2xl shadow-md hover:shadow-xl overflow-hidden transition-all duration-300 transform hover:-translate-y-1"
-              >
-                {/* Image du produit */}
-                <div className="relative h-48 overflow-hidden bg-gray-100">
-                  {product.images?.[0] ? (
-                    <img
-                      src={product.images[0]?.url}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <FontAwesomeIcon icon={faBox} className="text-gray-300 text-4xl" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Informations du produit */}
-                <div className="p-4">
-                  <h3 className="font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">
-                    {product.name}
-                  </h3>
-                  {product.description && (
-                    <p className="text-gray-500 text-sm mb-3 line-clamp-2">{product.description}</p>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold text-blue-600">
-                      {product.price?.toLocaleString('fr-FR')} FCFA
-                    </span>
-                    {product.rating && (
-                      <div className="flex items-center space-x-1">
-                        <FontAwesomeIcon icon={faStar} className="text-yellow-400 text-sm" />
-                        <span className="text-sm text-gray-600">{product.rating}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          /* État vide : aucun produit */
-          <div className="bg-white rounded-2xl shadow-md p-12 text-center">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <FontAwesomeIcon icon={faSearch} className="text-gray-400 text-3xl" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">
-              {t('categories.noProducts', 'Aucun produit trouvé')}
-            </h3>
-            <p className="text-gray-500 mb-6">
-              {searchTerm
-                ? `Aucun produit ne correspond à "${searchTerm}"`
-                : 'Cette catégorie ne contient pas encore de produits.'}
-            </p>
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
-              >
-                Voir tous les produits
-              </button>
-            )}
-          </div>
+      {/* En-tête */}
+      <div className="categorie-header">
+        {categorie.image && (
+          <img
+            src={categorie.image}
+            alt={categorie.name}
+            className="categorie-img"
+          />
         )}
+        {!categorie.image && categorie.icon && (
+          <span className="categorie-icone">{categorie.icon}</span>
+        )}
+        <div>
+          <h1 className="categorie-titre">{categorie.name}</h1>
+          {categorie.description && (
+            <p className="categorie-desc">{categorie.description}</p>
+          )}
+          <span className="categorie-count">
+            {products.length} produit{products.length !== 1 ? "s" : ""}
+          </span>
+        </div>
       </div>
+
+      {/* Barre de recherche */}
+      <div className="barre-recherche">
+        <input
+          type="text"
+          placeholder="Rechercher un produit..."
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          className="champ-recherche"
+        />
+        <span className="compte-resultats">
+          {produitsFiltres.length} résultat{produitsFiltres.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Grille produits */}
+      {chargementProduits ? (
+        <div className="chargement">Chargement des produits...</div>
+      ) : produitsFiltres.length === 0 ? (
+        <div className="aucun-produit">
+          <div className="aucun-icone">🔍</div>
+          <p>
+            {recherche
+              ? `Aucun produit ne correspond à "${recherche}"`
+              : "Cette catégorie ne contient pas encore de produits."}
+          </p>
+          {recherche && (
+            <button
+              className="bouton-effacer"
+              onClick={() => setRecherche("")}
+            >
+              Voir tous les produits
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grille-produits">
+          {produitsFiltres.map((produit) => (
+            <Link
+              key={produit.id}
+              to={`/products/${produit.id}`}
+              className="produit-carte"
+            >
+              <div className="produit-img-conteneur">
+                <img
+                  src={produit.images?.[0]?.url || "/placeholder.png"}
+                  alt={produit.name}
+                  className="produit-img"
+                />
+                {produit.stock === 0 && (
+                  <div className="badge-rupture">Rupture de stock</div>
+                )}
+              </div>
+              <div className="produit-infos">
+                <div className="produit-nom">{produit.name}</div>
+                {produit.description && (
+                  <p className="produit-desc">{produit.description}</p>
+                )}
+                <div className="produit-prix">{formatFCFA(produit.price)}</div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <style>{`
+        .page-categorie { font-family: system-ui, sans-serif; max-width: 1200px; margin: 0 auto; padding: 24px; }
+        .chargement { text-align: center; padding: 60px; color: #9ca3af; }
+
+        .fil-ariane { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #9ca3af; margin-bottom: 20px; }
+        .fil-ariane a { color: #6b7280; text-decoration: none; }
+        .fil-ariane a:hover { color: #ff6b35; }
+        .fil-ariane .actif { color: #111; font-weight: 500; }
+        .sep { color: #d1d5db; }
+
+        .categorie-header {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          background: #fff;
+          border-radius: 10px;
+          padding: 20px 24px;
+          border: 1px solid #e5e7eb;
+          margin-bottom: 20px;
+        }
+        .categorie-img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+        .categorie-icone { font-size: 48px; flex-shrink: 0; }
+        .categorie-titre { font-size: 22px; font-weight: 700; color: #111; margin: 0 0 4px; }
+        .categorie-desc { font-size: 14px; color: #6b7280; margin: 0 0 6px; }
+        .categorie-count { font-size: 13px; color: #9ca3af; }
+
+        .barre-recherche { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .champ-recherche {
+          flex: 1;
+          padding: 10px 14px;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          font-size: 14px;
+          outline: none;
+          max-width: 400px;
+        }
+        .champ-recherche:focus { border-color: #ff6b35; }
+        .compte-resultats { font-size: 14px; color: #6b7280; }
+
+        .aucun-produit { text-align: center; padding: 60px; color: #9ca3af; }
+        .aucun-icone { font-size: 48px; margin-bottom: 12px; }
+        .bouton-effacer {
+          background: #ff6b35;
+          color: #fff;
+          border: none;
+          padding: 10px 22px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          margin-top: 14px;
+        }
+
+        .grille-produits {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+          gap: 18px;
+        }
+        .produit-carte {
+          background: #fff;
+          border-radius: 10px;
+          border: 1px solid #e5e7eb;
+          overflow: hidden;
+          text-decoration: none;
+          display: flex;
+          flex-direction: column;
+          transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .produit-carte:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+
+        .produit-img-conteneur { position: relative; }
+        .produit-img { width: 100%; height: 180px; object-fit: cover; display: block; }
+        .badge-rupture {
+          position: absolute;
+          bottom: 8px;
+          left: 8px;
+          background: rgba(0,0,0,0.65);
+          color: #fff;
+          font-size: 11px;
+          padding: 3px 8px;
+          border-radius: 4px;
+        }
+
+        .produit-infos { padding: 12px; flex: 1; }
+        .produit-nom {
+          font-size: 14px;
+          font-weight: 600;
+          color: #111;
+          margin-bottom: 4px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .produit-carte:hover .produit-nom { color: #ff6b35; }
+        .produit-desc {
+          font-size: 12px;
+          color: #9ca3af;
+          margin: 0 0 6px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .produit-prix { font-size: 16px; font-weight: 700; color: #ff6b35; }
+      `}</style>
     </div>
   );
-};
-
-export default CategoryDetail;
+}

@@ -3,24 +3,25 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faEye, 
-  faSearch, 
-  faFilter,
+import {
+  faEye,
+  faSearch,
   faShoppingCart,
   faCalendar,
   faEuroSign,
-  faCheckCircle
+  faCheckCircle,
+  faChevronDown
 } from '@fortawesome/free-solid-svg-icons';
+import toast from 'react-hot-toast';
 
 import { RootState, AppDispatch } from '@/store';
-import { fetchOrders } from '@/store/slices-test/orderSlice';
+import { fetchOrders, updateOrderStatus } from '@/store/slices/orderSlice';
 import { ROUTES } from '@/utils/url/url_frontend';
 
 const AdminOrders: React.FC = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
-  const { orders, loading, error } = useSelector((state: RootState) => state.orders);
+  const { orders, loading, error } = useSelector((state: RootState) => state.order);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -28,6 +29,15 @@ const AdminOrders: React.FC = () => {
   useEffect(() => {
     dispatch(fetchOrders());
   }, [dispatch]);
+
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    try {
+      await dispatch(updateOrderStatus({ id: orderId, status: newStatus })).unwrap();
+      toast.success(`Statut mis à jour : ${newStatus}`);
+    } catch {
+      toast.error('Erreur lors de la mise à jour du statut');
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const statusClasses = {
@@ -267,7 +277,29 @@ const AdminOrders: React.FC = () => {
                       })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(order.status)}
+                      <div className="relative inline-block">
+                        <select
+                          value={order.status}
+                          onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                          className="appearance-none pl-3 pr-8 py-1.5 text-xs font-medium rounded-full border-0 focus:ring-2 focus:ring-blue-500 cursor-pointer bg-transparent"
+                          style={{ backgroundImage: 'none' }}
+                        >
+                          <option value="pending">En attente</option>
+                          <option value="processing">En cours</option>
+                          <option value="shipped">Expédiée</option>
+                          <option value="delivered">Livrée</option>
+                          <option value="cancelled">Annulée</option>
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center">
+                          <FontAwesomeIcon icon={faChevronDown} className="text-gray-400 text-xs" />
+                        </div>
+                        <div className={`absolute inset-0 rounded-full -z-10 ${
+                          order.status === 'delivered'  ? 'bg-green-100'  :
+                          order.status === 'shipped'    ? 'bg-purple-100' :
+                          order.status === 'processing' ? 'bg-blue-100'   :
+                          order.status === 'cancelled'  ? 'bg-red-100'    : 'bg-yellow-100'
+                        }`} />
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <Link

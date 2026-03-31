@@ -14,7 +14,7 @@ import {
 import toast from 'react-hot-toast';
 
 import { RootState, AppDispatch } from '@/store';
-import { logout } from '@/store/slices/authSlice';
+import { deconnexion } from '@/store/slices/authSlice';
 import { ROUTES } from '@/utils/url/url_frontend';
 
 interface MenuItem {
@@ -37,7 +37,7 @@ const SuperAdminLayout: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
 
   const handleLogout = async () => {
-    await dispatch(logout());
+    await dispatch(deconnexion());
     toast.success(t('auth.logoutSuccess', 'Déconnexion réussie'));
     navigate(ROUTES.PUBLIC.HOME);
   };

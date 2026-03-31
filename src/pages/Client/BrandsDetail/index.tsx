@@ -24,12 +24,7 @@ import {
 } from '@fortawesome/free-brands-svg-icons';
 
 import { AppDispatch, RootState } from '@/store';
-import {
-  fetchBrandById,
-  selectSelectedCompany,
-  selectCompanyLoading,
-  selectCompanyError,
-} from '@/store/slices-test/brandSlice';
+import { fetchBrandParSlug } from '@/store/slices/brandSlice';
 import { ROUTES } from '@/utils/url/url_frontend';
 
 const CompanyDetail: React.FC = () => {
@@ -38,14 +33,12 @@ const CompanyDetail: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   // Sélection des données Redux
-  const company = useSelector(selectSelectedCompany);
-  const loading = useSelector(selectCompanyLoading);
-  const error = useSelector(selectCompanyError);
+  const { brandActuel: company, chargement: loading, erreur: error } = useSelector((state: RootState) => state.brand) as any;
 
   // Chargement de l'entreprise au montage du composant
   useEffect(() => {
     if (id) {
-      dispatch(fetchBrandById(id));
+      dispatch(fetchBrandParSlug(id));
     }
   }, [dispatch, id]);
 

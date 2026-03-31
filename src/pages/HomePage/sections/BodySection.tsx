@@ -47,7 +47,8 @@ export const BodySection: React.FC = () => {
   const navigate  = useNavigate();
   const dispatch  = useDispatch<AppDispatch>();
 
-  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  const { user } = useSelector((state: RootState) => state.auth);
+  const isAuthenticated = !!user;
   const { products, loading: productsLoading }   = useSelector((state: RootState) => state.product);
   const { categories, loading: categoriesLoading } = useSelector((state: RootState) => state.category);
   const wishlistItems = useSelector((state: RootState) => (state as any).wishlist?.items ?? []);

@@ -22,11 +22,8 @@ import {
   faComment,
   faUserCheck,
   faUserTimes,
-  faCog,
-  faBars
+  faCog
 } from '@fortawesome/free-solid-svg-icons';
-import SuperAdminSidebar from '@/pages/SuperAdmin/Sidebar';
-
 // Types
 interface DashboardStats {
   totalUsers: number;
@@ -81,7 +78,6 @@ export const SuperAdminDashboard: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('7d');
   const [realtimeData, setRealtimeData] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Données simulées
   const dashboardStats: DashboardStats = {
@@ -343,24 +339,16 @@ export const SuperAdminDashboard: React.FC = () => {
   }, [realtimeData]);
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex overflow-hidden">
-      
+    <div className="bg-gradient-to-br from-gray-50 to-blue-50 min-h-full">
+
       {/* Contenu Principal */}
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${
-        sidebarCollapsed ? 'ml-20' : ''
-      }`}>
-        
+      <div className="flex flex-col">
+
         {/* Header Fixe du Contenu Principal */}
         <div className="flex-shrink-0 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm z-40">
           <div className="px-6 py-4">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <FontAwesomeIcon icon={faBars} />
-                </button>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 mb-1">
                     Tableau de Bord

@@ -12,7 +12,7 @@ import {
 import toast from 'react-hot-toast';
 
 import { RootState, AppDispatch } from '@/store';
-import { logout } from '@/store/slices/authSlice';
+import { deconnexion } from '@/store/slices/authSlice';
 import { ROUTES } from '@/utils/url/url_frontend';
 
 const CompanyLayout: React.FC = () => {
@@ -24,7 +24,7 @@ const CompanyLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const handleLogout = async () => {
-    await dispatch(logout());
+    await dispatch(deconnexion());
     toast.success(t('auth.logoutSuccess', 'Déconnexion réussie'));
     navigate(ROUTES.PUBLIC.HOME);
   };

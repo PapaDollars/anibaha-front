@@ -18,9 +18,9 @@ import {
 import toast from 'react-hot-toast';
 
 import { RootState, AppDispatch } from '@/store';
-import { fetchProductById } from '@/store/slices-test/productSlice';
-import { addToCart } from '@/store/slices-test/cartSlice';
-import { addToWishlist, removeFromWishlist } from '@/store/slices-test/wishlistSlice';
+import { fetchProductById } from '@/store/slices/productSlice';
+import { addToCart } from '@/store/slices/cartSlice';
+import { ajouterWishlist, retirerWishlist } from '@/store/slices/wishlistSlice';
 import { ROUTES } from '@/utils/url/url_frontend';
 import { useError } from '@/context/ErrorContext';
 
@@ -40,7 +40,7 @@ const ProductDetail: React.FC = () => {
 
   // Find product from the products array
   const product = products.find(p => p.id === id);
-  const isInWishlist = wishlistItems.some(item => item?.product?.id === product?.id && item?.userId === user?.id);
+  const isInWishlist = wishlistItems.some(item => item?.productId === product?.id);
 
   useEffect(() => {
     if (id && (!product || products.length === 0)) {
@@ -82,16 +82,10 @@ const ProductDetail: React.FC = () => {
     }
 
     if (isInWishlist) {
-      const wishlistItem = wishlistItems.find(item => item?.product?.id === product?.id && item?.userId === user?.id);
-      if (wishlistItem) {
-        dispatch(removeFromWishlist(wishlistItem.id));
-        toast.success(t('wishlist.removeSuccess'));
-      }
+      dispatch(retirerWishlist(product.id));
+      toast.success(t('wishlist.removeSuccess'));
     } else {
-      dispatch(addToWishlist({
-        product,
-        userId: user.id
-      }));
+      dispatch(ajouterWishlist(product.id));
       toast.success(t('wishlist.addSuccess'));
     }
   };

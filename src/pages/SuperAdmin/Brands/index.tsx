@@ -1,360 +1,475 @@
-//superAdmin brands
-import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useTranslation } from 'react-i18next';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faPlus, 
-  faEdit, 
-  faTrash, 
-  faStore,
-  faUser,
-  faBox,
-  faCheck,
-  faTimes
-} from '@fortawesome/free-solid-svg-icons';
-import toast from 'react-hot-toast';
-import { RootState, AppDispatch } from '@/store';
-import { 
-  fetchBrands, 
-  createCompany, 
-  updateBrand, 
-  deleteBrand,
-  selectCompanies,
-  selectCompanyLoading,
-  selectCompanyError
-} from '@/store/slices-test/brandSlice';
-import { Company } from '@/types/company';
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/store";
+import {
+  fetchBrands,
+  creerBrand,
+  modifierBrand,
+  supprimerBrand,
+  toggleStatutBrand,
+} from "@/store/slices/brandSlice";
 
-const Companys: React.FC = () => {
-  const { t } = useTranslation();
+export default function AdminBrands() {
   const dispatch = useDispatch<AppDispatch>();
-  const companies = useSelector(selectCompanies) as Company[];
-  const loading = useSelector(selectCompanyLoading);
-  const error = useSelector(selectCompanyError);
-  const isSuperAdmin = useSelector((state: RootState) => state.auth.user?.role === 'superAdmin');
+  const { brands, chargement, pagination } = useSelector(
+    (state: RootState) => state.brand
+  );
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    logo: '',
-    banner: '',
+  const [recherche, setRecherche] = useState("");
+  const [modalOuverte, setModalOuverte] = useState(false);
+  const [brandEnEdition, setBrandEnEdition] = useState<any>(null);
+  const [formulaire, setFormulaire] = useState({
+    name: "",
+    description: "",
+    website: "",
+    adminEmail: "",
   });
 
   useEffect(() => {
-    dispatch(fetchBrands());
+    dispatch(fetchBrands({ page: 1 }));
   }, [dispatch]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Recherche avec délai
+  useEffect(() => {
+    const minuterie = setTimeout(() => {
+      dispatch(fetchBrands({ search: recherche, page: 1 }));
+    }, 400);
+    return () => clearTimeout(minuterie);
+  }, [recherche, dispatch]);
+
+  const ouvrirModal = (brand?: any) => {
+    if (brand) {
+      setBrandEnEdition(brand);
+      setFormulaire({
+        name: brand.name,
+        description: brand.description || "",
+        website: brand.website || "",
+        adminEmail: brand.admin?.email || "",
+      });
+    } else {
+      setBrandEnEdition(null);
+      setFormulaire({ name: "", description: "", website: "", adminEmail: "" });
+    }
+    setModalOuverte(true);
+  };
+
+  const fermerModal = () => {
+    setModalOuverte(false);
+    setBrandEnEdition(null);
+  };
+
+  const soumettreFormulaire = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (selectedCompany) {
-        await dispatch(updateBrand({
-  ...selectedCompany,
-  name: formData.name,
-  description: formData.description || '',
-  logo: formData.logo || '',
-  banner: formData.banner || '',
-  slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
-  status: selectedCompany.status || 'approved',
-  isActive: selectedCompany.isActive ?? true,
-  isVerified: selectedCompany.isVerified ?? false,
-  ownerId: selectedCompany.ownerId || '',
-  settings: selectedCompany.settings || {
-    theme: { primaryColor: '#000000', secondaryColor: '#FFFFFF' },
-    policies: {
-      returnPolicy: '',
-      shippingPolicy: '',
-      privacyPolicy: '',
-      termsOfService: ''
-    },
-    integrations: { paymentGateways: [], shippingProviders: [] }
-  },
-  businessInfo: selectedCompany.businessInfo || {
-    businessType: 'company',
-    registrationNumber: '',
-    vatNumber: '',
-    legalName: '',
-    website: ''
-  },
-  contactInfo: selectedCompany.contactInfo || {
-    email: '',
-    phone: '',
-    address: { street: '', city: '', postalCode: '', country: '' }
-  },
-  updatedAt: new Date().toISOString(),
-})).unwrap();
-        toast.success(t('companies.updateSuccess', 'Marque mise à jour avec succès'));
-      } else {
-        await dispatch(createCompany({
-  ...formData,
-  slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
-  status: 'approved',
-  isActive: true,
-  isVerified: false,
-  ownerId: '',
-  settings: {
-    theme: { primaryColor: '#000000', secondaryColor: '#FFFFFF' },
-    policies: {
-      returnPolicy: '',
-      shippingPolicy: '',
-      privacyPolicy: '',
-      termsOfService: ''
-    },
-    integrations: { paymentGateways: [], shippingProviders: [] },
-  },
-  businessInfo: {
-  businessType: 'company',
-  registrationNumber: '',
-  taxNumber: '',
-  foundedYear: undefined,
-  employeeCount: '',
-  annualRevenue: '',
-  industry: '',
-  website: ''
-},
-  contactInfo: {
-  email: '',
-  phone: '',
-  whatsapp: '',
-  address: { id: '', isDefault: false, street: '', city: '', postalCode: '', country: '' },
-  workingHours: undefined
-},
-  banner: formData.banner || '',
-  logo: formData.logo || '',
-  description: formData.description || '',
-})).unwrap();
-        toast.success(t('companies.createSuccess', 'Marque créée avec succès'));
-      }
-      setIsModalOpen(false);
-      setSelectedCompany(null);
-      setFormData({ name: '', description: '', logo: '', banner: '' });
-    } catch (error) {
-      toast.error(t('companies.error', 'Une erreur est survenue'));
+    if (brandEnEdition) {
+      await dispatch(modifierBrand({ id: brandEnEdition.id, donnees: formulaire }));
+    } else {
+      await dispatch(creerBrand(formulaire));
+    }
+    fermerModal();
+  };
+
+  const gererSuppression = async (id: string, nom: string) => {
+    if (confirm(`Supprimer la marque "${nom}" ? Cette action est irréversible.`)) {
+      await dispatch(supprimerBrand(id));
     }
   };
 
-  const handleDelete = async (brandId: string) => {
-    if (window.confirm(t('companies.confirmDelete', 'Êtes-vous sûr de vouloir supprimer cette marque ?'))) {
-      try {
-        await dispatch(deleteBrand(brandId)).unwrap();
-        toast.success(t('companies.deleteSuccess', 'Marque supprimée avec succès'));
-      } catch (error) {
-        toast.error(t('companies.error', 'Une erreur est survenue'));
-      }
-    }
+  const gererToggle = async (id: string) => {
+    await dispatch(toggleStatutBrand(id));
   };
-
-  const handleEdit = (brand: Company) => {
-    setSelectedCompany(brand);
-    setFormData({
-      name: brand.name,
-      description: brand.description,
-      logo: brand.logo || '',
-      banner: brand.banner || '',
-    });
-    setIsModalOpen(true);
-  };
-
-  if (!isSuperAdmin) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              {t('common.unauthorized', 'Accès non autorisé')}
-            </h1>
-            <p className="text-gray-600">
-              {t('common.unauthorizedMessage', 'Vous n\'avez pas les permissions nécessaires pour accéder à cette page.')}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {t('companies.title', 'Gestion des marques')}
-            </h1>
-            <p className="mt-2 text-gray-600">
-              {t('companies.subtitle', 'Gérez les marques et leurs administrateurs')}
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              setSelectedCompany(null);
-              setFormData({ name: '', description: '', logo: '', banner: '' });
-              setIsModalOpen(true);
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center"
-          >
-            <FontAwesomeIcon icon={faPlus} className="mr-2" />
-            {t('companies.add', 'Ajouter une marque')}
-          </button>
+    <div className="page-marques">
+      {/* En-tête */}
+      <div className="page-header">
+        <div>
+          <h2 className="page-titre">Marques & Entreprises</h2>
+          <p className="page-sous-titre">{pagination.total} marque(s) enregistrée(s)</p>
         </div>
-
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          </div>
-        ) : error ? (
-          <div className="text-center py-12 text-red-600">
-            {error}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {companies.map((brand: Company) => (
-              <div key={brand.id} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200">
-                  {brand.banner ? (
-                    <img
-                      src={brand.banner}
-                      alt={brand.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <FontAwesomeIcon icon={faStore} className="text-gray-400 text-4xl" />
-                    </div>
-                  )}
-                  <div className="absolute top-4 right-4 flex space-x-2">
-                    <button
-                      onClick={() => handleEdit(brand)}
-                      className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
-                    >
-                      <FontAwesomeIcon icon={faEdit} className="text-blue-600" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(brand.id)}
-                      className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
-                    >
-                      <FontAwesomeIcon icon={faTrash} className="text-red-600" />
-                    </button>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="flex items-center mb-4">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mr-4">
-                      {brand.logo ? (
-                        <img
-                          src={brand.logo}
-                          alt={brand.name}
-                          className="w-12 h-12 object-contain"
-                        />
-                      ) : (
-                        <FontAwesomeIcon icon={faStore} className="text-gray-400 text-2xl" />
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">{brand.name}</h3>
-                      <p className="text-gray-600 text-sm">
-                        {t('companies.owner', 'Propriétaire')}: {brand.ownerId}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-gray-600 mb-4">{brand.description}</p>
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <div className="flex items-center">
-                      <FontAwesomeIcon icon={faBox} className="mr-1" />
-                      <span>{t('companies./* produits (à implémenter si besoin) */', 'produits')}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <FontAwesomeIcon icon={faCheck} className="mr-1" />
-                      <span>{brand.isActive ? t('companies.active', 'Active') : t('companies.inactive', 'Inactive')}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <button className="bouton-primaire" onClick={() => ouvrirModal()}>
+          + Nouvelle marque
+        </button>
       </div>
 
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-lg w-full">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              {selectedCompany ? t('companies.edit', 'Modifier la marque') : t('companies.create', 'Créer une marque')}
-            </h2>
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('companies.name', 'Nom')}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('companies.description', 'Description')}
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    rows={3}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('companies.logo', 'Logo URL')}
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.logo}
-                    onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('companies.banner', 'Bannière URL')}
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.banner}
-                    onChange={(e) => setFormData({ ...formData, banner: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+      {/* Barre de recherche */}
+      <div className="barre-outils">
+        <input
+          type="text"
+          placeholder="Rechercher une marque..."
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          className="champ-recherche"
+        />
+      </div>
+
+      {/* Tableau */}
+      {chargement ? (
+        <div className="chargement">Chargement...</div>
+      ) : (
+        <div className="tableau-conteneur">
+          <table className="tableau">
+            <thead>
+              <tr>
+                <th>Marque</th>
+                <th>Slug</th>
+                <th>Produits</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {brands.map((brand) => (
+                <tr key={brand.id}>
+                  <td>
+                    <div className="cellule-marque">
+                      {brand.logo && (
+                        <img src={brand.logo} alt={brand.name} className="logo-marque" />
+                      )}
+                      <div>
+                        <div className="nom-marque">{brand.name}</div>
+                        {brand.website && (
+                          <a
+                            href={brand.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="site-marque"
+                          >
+                            {brand.website}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <code className="badge-slug">/companies/{brand.slug}</code>
+                  </td>
+                  <td>{brand._count?.products || 0}</td>
+                  <td>
+                    <span className={`badge-statut ${brand.isActive ? "actif" : "inactif"}`}>
+                      {brand.isActive ? "Actif" : "Inactif"}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="actions-groupe">
+                      <button
+                        className="bouton-action modifier"
+                        onClick={() => ouvrirModal(brand)}
+                      >
+                        Modifier
+                      </button>
+                      <button
+                        className={`bouton-action ${brand.isActive ? "desactiver" : "activer"}`}
+                        onClick={() => gererToggle(brand.id)}
+                      >
+                        {brand.isActive ? "Désactiver" : "Activer"}
+                      </button>
+                      <button
+                        className="bouton-action supprimer"
+                        onClick={() => gererSuppression(brand.id, brand.name)}
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {brands.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="table-vide">
+                    Aucune marque trouvée
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="pagination">
+          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(
+            (page) => (
+              <button
+                key={page}
+                className={`bouton-page ${pagination.page === page ? "actif" : ""}`}
+                onClick={() => dispatch(fetchBrands({ page, search: recherche }))}
+              >
+                {page}
+              </button>
+            )
+          )}
+        </div>
+      )}
+
+      {/* Modal création/édition */}
+      {modalOuverte && (
+        <div className="modal-overlay" onClick={fermerModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{brandEnEdition ? "Modifier la marque" : "Nouvelle marque"}</h3>
+              <button className="modal-fermer" onClick={fermerModal}>✕</button>
+            </div>
+            <form onSubmit={soumettreFormulaire} className="modal-form">
+              <div className="groupe-champ">
+                <label>Nom de la marque *</label>
+                <input
+                  type="text"
+                  required
+                  value={formulaire.name}
+                  onChange={(e) =>
+                    setFormulaire((f) => ({ ...f, name: e.target.value }))
+                  }
+                  placeholder="Ex : Nike Cameroun"
+                />
               </div>
-              <div className="mt-6 flex justify-end space-x-4">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
-                >
-                  {t('common.cancel', 'Annuler')}
+              <div className="groupe-champ">
+                <label>Description</label>
+                <textarea
+                  value={formulaire.description}
+                  onChange={(e) =>
+                    setFormulaire((f) => ({ ...f, description: e.target.value }))
+                  }
+                  placeholder="Description de la marque..."
+                  rows={3}
+                />
+              </div>
+              <div className="groupe-champ">
+                <label>Site web</label>
+                <input
+                  type="url"
+                  value={formulaire.website}
+                  onChange={(e) =>
+                    setFormulaire((f) => ({ ...f, website: e.target.value }))
+                  }
+                  placeholder="https://..."
+                />
+              </div>
+              {!brandEnEdition && (
+                <div className="groupe-champ">
+                  <label>Email de l'administrateur *</label>
+                  <input
+                    type="email"
+                    required
+                    value={formulaire.adminEmail}
+                    onChange={(e) =>
+                      setFormulaire((f) => ({ ...f, adminEmail: e.target.value }))
+                    }
+                    placeholder="admin@marque.cm"
+                  />
+                </div>
+              )}
+              <div className="modal-footer">
+                <button type="button" className="bouton-secondaire" onClick={fermerModal}>
+                  Annuler
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-                >
-                  {selectedCompany ? t('common.save', 'Enregistrer') : t('common.create', 'Créer')}
+                <button type="submit" className="bouton-primaire" disabled={chargement}>
+                  {chargement
+                    ? "En cours..."
+                    : brandEnEdition
+                    ? "Enregistrer"
+                    : "Créer"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      <style>{`
+        .page-marques { font-family: system-ui, sans-serif; }
+        .page-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 20px;
+        }
+        .page-titre { font-size: 22px; font-weight: 700; color: #111; margin: 0 0 4px; }
+        .page-sous-titre { font-size: 14px; color: #666; margin: 0; }
+
+        .barre-outils { margin-bottom: 16px; }
+        .champ-recherche {
+          width: 300px;
+          padding: 8px 14px;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          font-size: 14px;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+        .champ-recherche:focus { border-color: #ff6b35; }
+
+        .tableau-conteneur {
+          background: #fff;
+          border-radius: 10px;
+          border: 1px solid #e5e7eb;
+          overflow: hidden;
+        }
+        .tableau { width: 100%; border-collapse: collapse; }
+        .tableau th {
+          background: #f9fafb;
+          padding: 11px 16px;
+          text-align: left;
+          font-size: 12px;
+          font-weight: 600;
+          color: #6b7280;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .tableau td {
+          padding: 14px 16px;
+          border-bottom: 1px solid #f3f4f6;
+          font-size: 14px;
+          color: #374151;
+        }
+        .tableau tr:last-child td { border-bottom: none; }
+        .tableau tr:hover td { background: #fafafa; }
+
+        .cellule-marque { display: flex; align-items: center; gap: 12px; }
+        .logo-marque { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; border: 1px solid #e5e7eb; }
+        .nom-marque { font-weight: 600; color: #111; }
+        .site-marque { font-size: 12px; color: #6b7280; text-decoration: none; }
+        .site-marque:hover { color: #ff6b35; }
+
+        .badge-slug {
+          background: #f3f4f6;
+          color: #374151;
+          padding: 3px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+        }
+
+        .badge-statut {
+          font-size: 12px;
+          font-weight: 600;
+          padding: 3px 10px;
+          border-radius: 20px;
+        }
+        .badge-statut.actif { background: #d1fae5; color: #065f46; }
+        .badge-statut.inactif { background: #fee2e2; color: #7f1d1d; }
+
+        .actions-groupe { display: flex; gap: 6px; flex-wrap: wrap; }
+        .bouton-action {
+          padding: 5px 10px;
+          border: none;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: opacity 0.15s;
+        }
+        .bouton-action:hover { opacity: 0.8; }
+        .bouton-action.modifier { background: #eff6ff; color: #1d4ed8; }
+        .bouton-action.activer { background: #d1fae5; color: #065f46; }
+        .bouton-action.desactiver { background: #fef3c7; color: #92400e; }
+        .bouton-action.supprimer { background: #fee2e2; color: #7f1d1d; }
+
+        .table-vide { text-align: center; color: #9ca3af; padding: 32px !important; }
+        .chargement { text-align: center; padding: 40px; color: #6b7280; }
+
+        .pagination { display: flex; gap: 6px; justify-content: center; margin-top: 16px; }
+        .bouton-page {
+          padding: 6px 12px;
+          border: 1px solid #d1d5db;
+          background: #fff;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 13px;
+          transition: all 0.15s;
+        }
+        .bouton-page:hover { border-color: #ff6b35; color: #ff6b35; }
+        .bouton-page.actif { background: #ff6b35; border-color: #ff6b35; color: #fff; }
+
+        .bouton-primaire {
+          background: #ff6b35;
+          color: #fff;
+          border: none;
+          padding: 9px 18px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: opacity 0.15s;
+        }
+        .bouton-primaire:hover { opacity: 0.88; }
+        .bouton-primaire:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .bouton-secondaire {
+          background: #f3f4f6;
+          color: #374151;
+          border: none;
+          padding: 9px 18px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+
+        /* Modal */
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 100;
+        }
+        .modal {
+          background: #fff;
+          border-radius: 12px;
+          width: 500px;
+          max-width: 95vw;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .modal-header h3 { margin: 0; font-size: 17px; font-weight: 600; }
+        .modal-fermer {
+          background: none;
+          border: none;
+          font-size: 18px;
+          cursor: pointer;
+          color: #9ca3af;
+          padding: 4px;
+        }
+        .modal-form { padding: 20px 24px; }
+        .groupe-champ { margin-bottom: 16px; }
+        .groupe-champ label {
+          display: block;
+          font-size: 13px;
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 6px;
+        }
+        .groupe-champ input,
+        .groupe-champ textarea {
+          width: 100%;
+          padding: 9px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          font-size: 14px;
+          outline: none;
+          box-sizing: border-box;
+          transition: border-color 0.2s;
+        }
+        .groupe-champ input:focus,
+        .groupe-champ textarea:focus { border-color: #ff6b35; }
+        .modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          padding-top: 8px;
+        }
+      `}</style>
     </div>
   );
-};
-
-export default Companys; 
+}

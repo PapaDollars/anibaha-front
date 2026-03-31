@@ -4,32 +4,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { api, Pagination } from '@/utils/apiService';
 import { API_ROUTES, API_GENERATORS } from '@/utils/url/url_backend';
+import type { Product } from '@/types/product';
 
-// Adapter à votre type Product existant dans @/types/product
-export interface ProductImage { id: string; url: string; isPrimary?: boolean; order?: number; }
-export interface Product {
-  id: string;
-  name: string;
-  slug?: string;
-  description: string;
-  price: number;
-  comparePrice?: number;
-  currency?: string;
-  images: ProductImage[];
-  category: string;
-  companyId?: string;
-  brand?: string;
-  stock: number;
-  isFeatured?: boolean;
-  isActive?: boolean;
-  status?: string;
-  rating?: number;
-  reviewCount?: number;
-  views?: number;
-  tags?: string[];
-  createdAt?: string;
-  updatedAt?: string;
-}
+export type { Product };
 
 interface ProductState {
   products: Product[];

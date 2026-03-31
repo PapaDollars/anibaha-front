@@ -19,8 +19,8 @@ import {
 import { RootState, AppDispatch } from '@/store';
 import { fetchProducts } from '@/store/slices/productSlice';
 import { fetchCategories } from '@/store/slices/categorySlice';
-import { addToCart } from '@/store/slices-test/cartSlice';
-import { addToWishlist, removeFromWishlist } from '@/store/slices-test/wishlistSlice';
+import { addToCart } from '@/store/slices/cartSlice';
+import { ajouterWishlist, retirerWishlist } from '@/store/slices/wishlistSlice';
 import { ProductCard } from '@/components/common/cards/product-card';
 import ROUTES from '@/utils/url/url_frontend';
 
@@ -31,7 +31,8 @@ const Products: React.FC = () => {
   const navigate = useNavigate();
 
   const { products, loading } = useSelector((state: RootState) => state.product);
-  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  const { user } = useSelector((state: RootState) => state.auth);
+  const isAuthenticated = !!user;
   const wishlistItems = useSelector((state: RootState) => state.wishlist.items);
 
   // ✅ Catégories viennent du store Redux (plus de fakeData)
@@ -128,10 +129,10 @@ const Products: React.FC = () => {
   };
 
   const handleAddToCart = (product: any, quantity: number) => dispatch(addToCart({ product, quantity }));
-  const handleAddToWishlist = (product: any) => dispatch(addToWishlist({ product, userId: user?.id || '' }));
-  const handleRemoveFromWishlist = (productId: string) => dispatch(removeFromWishlist(productId));
+  const handleAddToWishlist = (product: any) => dispatch(ajouterWishlist(product.id));
+  const handleRemoveFromWishlist = (productId: string) => dispatch(retirerWishlist(productId));
   const isInWishlist = (productId: string) =>
-    wishlistItems.some(item => item?.product?.id === productId && item?.userId === user?.id);
+    wishlistItems.some(item => item?.product?.id === productId);
 
   if (loading) {
     return (
