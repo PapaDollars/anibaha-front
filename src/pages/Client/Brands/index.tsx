@@ -20,6 +20,7 @@ import {
   faInstagram,
   faTwitter
 } from '@fortawesome/free-brands-svg-icons';
+import { useNavigate } from 'react-router-dom';
 import { RootState, AppDispatch } from '@/store';
 import { fetchBrands } from '@/store/slices/brandSlice';
 // Corrected imports to use the new modular components
@@ -34,6 +35,7 @@ import { ROUTES } from '@/utils/url/url_frontend';
 const Companys: React.FC = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const { brands: companies, chargement: loading, erreur: error } = useSelector((state: RootState) => state.brand);
 
 
@@ -89,7 +91,7 @@ const Companys: React.FC = () => {
   };
 
   const handleCompanySelect = (brandId: string) => {
-    setSelectedCompany(brandId);
+    navigate(`/companies/${brandId}`);
   };
 
   if (loading) {

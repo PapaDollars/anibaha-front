@@ -154,17 +154,18 @@ export const selectIsClient     = (state: RootState) => state.auth.user?.role ==
 // ─── Helper interne — persiste les tokens ─────────────────────────────────────
 
 function persisterTokens(state: AuthState, payload: any) {
-  if (payload.accessToken) {
-    state.accessToken = payload.accessToken;
-    localStorage.setItem("accessToken", payload.accessToken);
+  const d = payload.data ?? payload;
+  if (d.accessToken) {
+    state.accessToken = d.accessToken;
+    localStorage.setItem("accessToken", d.accessToken);
   }
-  if (payload.refreshToken) {
-    state.refreshToken = payload.refreshToken;
-    localStorage.setItem("refreshToken", payload.refreshToken);
+  if (d.refreshToken) {
+    state.refreshToken = d.refreshToken;
+    localStorage.setItem("refreshToken", d.refreshToken);
   }
-  if (payload.user) {
-    state.user = payload.user;
-    localStorage.setItem("user", JSON.stringify(payload.user));
+  if (d.user) {
+    state.user = d.user;
+    localStorage.setItem("user", JSON.stringify(d.user));
   }
 }
 
@@ -220,8 +221,8 @@ const authSlice = createSlice({
       .addCase(fetchMe.pending,   (state) => { state.loading = true; state.error = null; })
       .addCase(fetchMe.fulfilled, (state, action) => {
         state.loading = false;
-        // L'API retourne { user: {...} } ou directement l'user
-        state.user = action.payload.user ?? action.payload;
+        const d = action.payload.data ?? action.payload;
+        state.user = d.user ?? d;
       })
       .addCase(fetchMe.rejected,  (state) => {
         state.loading = false;
@@ -244,9 +245,10 @@ const authSlice = createSlice({
     // ── refreshToken ───────────────────────────────────────────
     builder
       .addCase(refreshToken.fulfilled, (state, action) => {
-        if (action.payload.accessToken) {
-          state.accessToken = action.payload.accessToken;
-          localStorage.setItem("accessToken", action.payload.accessToken);
+        const d = action.payload.data ?? action.payload;
+        if (d.accessToken) {
+          state.accessToken = d.accessToken;
+          localStorage.setItem("accessToken", d.accessToken);
         }
       })
       .addCase(refreshToken.rejected, (state) => {

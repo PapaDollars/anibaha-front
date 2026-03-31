@@ -147,8 +147,10 @@ const brandSlice = createSlice({
       .addCase(fetchBrands.pending,   (state) => { state.chargement = true; state.erreur = null; })
       .addCase(fetchBrands.fulfilled, (state, action) => {
         state.chargement = false;
-        state.brands = action.payload.brands ?? action.payload.companies ?? [];
-        if (action.payload.pagination) state.pagination = action.payload.pagination;
+        const d = action.payload.data ?? action.payload;
+        state.brands = Array.isArray(d) ? d : (d.companies ?? d.brands ?? []);
+        const pagination = d.pagination ?? action.payload.pagination;
+        if (pagination) state.pagination = pagination;
       })
       .addCase(fetchBrands.rejected,  (state, action) => { state.chargement = false; state.erreur = action.payload as string; });
 
@@ -156,7 +158,8 @@ const brandSlice = createSlice({
       .addCase(fetchBrandParSlug.pending,   (state) => { state.chargement = true; state.erreur = null; })
       .addCase(fetchBrandParSlug.fulfilled, (state, action) => {
         state.chargement = false;
-        state.brandActuel = action.payload.company ?? action.payload.brand ?? null;
+        const d = action.payload.data ?? action.payload;
+        state.brandActuel = d.company ?? d.brand ?? (typeof d === 'object' && d.id ? d : null);
       })
       .addCase(fetchBrandParSlug.rejected,  (state, action) => { state.chargement = false; state.erreur = action.payload as string; });
 

@@ -66,11 +66,18 @@ export const fetchFeaturedCategories = createAsyncThunk(
 
 export const fetchCategoryById = createAsyncThunk(
   'category/fetchById',
-  async (id: string, { rejectWithValue }) => {
+  async (id: string, { rejectWithValue, getState }) => {
     try {
-      const response = await api.get<Category>(API_GENERATORS.category(id));
-      return response.data;
+      const response = await api.get<any>(API_GENERATORS.category(id));
+      // Gère { category: {...} } ou la catégorie directement
+      return response.data?.category ?? response.data;
     } catch {
+      // Fallback : chercher dans le store si déjà chargé
+      const state = getState() as any;
+      const found = state.category.categories.find(
+        (c: Category) => c.id === id || c.slug === id
+      );
+      if (found) return found;
       return rejectWithValue('Catégorie introuvable');
     }
   }
@@ -92,7 +99,10 @@ const categorySlice = createSlice({
       })
       .addCase(fetchCategories.fulfilled, (state, action) => {
         state.loading = false;
-        state.categories = action.payload;
+        // Gère tableau direct ou { categories: [] }
+        state.categories = Array.isArray(action.payload)
+          ? action.payload
+          : (action.payload?.categories ?? action.payload?.data ?? []);
       })
       .addCase(fetchCategories.rejected, (state, action) => {
         state.loading = false;

@@ -19,12 +19,18 @@ export default function CategoryDetail() {
 
   const [recherche, setRecherche] = useState("");
 
+  // Charger la catégorie d'abord, puis les produits avec son slug
   useEffect(() => {
     if (id) {
       dispatch(fetchCategoryById(id));
-      dispatch(fetchProducts({ category: id }));
     }
   }, [id, dispatch]);
+
+  useEffect(() => {
+    if (categorie) {
+      dispatch(fetchProducts({ category: categorie.slug }));
+    }
+  }, [categorie?.slug, dispatch]);
 
   const produitsFiltres = products.filter((p) =>
     p.name.toLowerCase().includes(recherche.toLowerCase()) ||
