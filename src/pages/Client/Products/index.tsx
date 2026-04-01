@@ -30,7 +30,7 @@ const Products: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const { products, loading } = useSelector((state: RootState) => state.product);
+  const { products } = useSelector((state: RootState) => state.product);
   const { user } = useSelector((state: RootState) => state.auth);
   const isAuthenticated = !!user;
   const wishlistItems = useSelector((state: RootState) => state.wishlist.items);
@@ -134,16 +134,7 @@ const Products: React.FC = () => {
   const isInWishlist = (productId: string) =>
     wishlistItems.some(item => item?.product?.id === productId);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-gray-50 to-blue-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600 mx-auto mb-6" />
-          <p className="text-gray-600 text-lg">{t('common.loading', 'Chargement...')}</p>
-        </div>
-      </div>
-    );
-  }
+  // Pas de full-page spinner — le contenu reste visible pendant le rechargement
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 relative">

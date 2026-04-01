@@ -1,6 +1,18 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "@/lib/axios";
 
+// ─── Helpers localStorage pour invités ───────────────────────────────────────
+
+const GUEST_KEY = "guest_wishlist";
+
+const loadGuestWishlist = (): ProduitWishlist[] => {
+  try { return JSON.parse(localStorage.getItem(GUEST_KEY) || "[]"); } catch { return []; }
+};
+const saveGuestWishlist = (items: ProduitWishlist[]) => {
+  localStorage.setItem(GUEST_KEY, JSON.stringify(items));
+};
+const isAuthenticated = () => !!localStorage.getItem("accessToken");
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ProduitWishlist {
@@ -37,6 +49,9 @@ const etatInitial: WishlistState = {
 export const fetchWishlist = createAsyncThunk(
   "wishlist/fetch",
   async (_, { rejectWithValue }) => {
+    if (!isAuthenticated()) {
+      return { items: loadGuestWishlist() };
+    }
     try { const r = await axios.get("/api/wishlist"); return r.data; }
     catch (e: any) { return rejectWithValue(e.response?.data?.message || "Erreur chargement wishlist"); }
   }
@@ -46,6 +61,20 @@ export const fetchWishlist = createAsyncThunk(
 export const ajouterWishlist = createAsyncThunk(
   "wishlist/add",
   async (productId: string, { rejectWithValue }) => {
+    if (!isAuthenticated()) {
+      const items = loadGuestWishlist();
+      const already = items.some(i => i.productId === productId);
+      if (already) return { item: null, guest: true };
+      const newItem: ProduitWishlist = {
+        id: `guest-${productId}`,
+        productId,
+        ajouteLe: new Date().toISOString(),
+        product: { id: productId, name: "", slug: "", price: 0, stock: 0, isActive: true, images: [], company: { name: "", slug: "" } },
+      };
+      items.push(newItem);
+      saveGuestWishlist(items);
+      return { item: newItem, guest: true };
+    }
     try { const r = await axios.post("/api/wishlist", { productId }); return r.data; }
     catch (e: any) { return rejectWithValue(e.response?.data?.message || "Erreur ajout wishlist"); }
   }
@@ -55,6 +84,11 @@ export const ajouterWishlist = createAsyncThunk(
 export const retirerWishlist = createAsyncThunk(
   "wishlist/remove",
   async (productId: string, { rejectWithValue }) => {
+    if (!isAuthenticated()) {
+      const items = loadGuestWishlist().filter(i => i.productId !== productId);
+      saveGuestWishlist(items);
+      return productId;
+    }
     try { await axios.delete(`/api/wishlist/${productId}`); return productId; }
     catch (e: any) { return rejectWithValue(e.response?.data?.message || "Erreur retrait wishlist"); }
   }
@@ -64,6 +98,10 @@ export const retirerWishlist = createAsyncThunk(
 export const clearWishlist = createAsyncThunk(
   "wishlist/clear",
   async (_, { rejectWithValue }) => {
+    if (!isAuthenticated()) {
+      saveGuestWishlist([]);
+      return true;
+    }
     try { await axios.delete("/api/wishlist"); return true; }
     catch (e: any) { return rejectWithValue(e.response?.data?.message || "Erreur vidage wishlist"); }
   }
@@ -93,7 +131,11 @@ const wishlistSlice = createSlice({
 
     builder
       .addCase(fetchWishlist.pending,   (state) => { state.chargement = true; state.erreur = null; })
-      .addCase(fetchWishlist.fulfilled, (state, action) => { state.chargement = false; state.items = action.payload.items ?? []; })
+      .addCase(fetchWishlist.fulfilled, (state, action) => {
+        state.chargement = false;
+        const d = action.payload.data ?? action.payload;
+        state.items = d.items ?? d ?? [];
+      })
       .addCase(fetchWishlist.rejected,  (state, action) => { state.chargement = false; state.erreur = action.payload as string; });
 
     builder

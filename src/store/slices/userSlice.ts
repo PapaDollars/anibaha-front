@@ -196,12 +196,21 @@ const userSlice = createSlice({
 
     builder
       .addCase(fetchProfil.pending,   (state) => { state.chargement = true; state.erreur = null; })
-      .addCase(fetchProfil.fulfilled, (state, action) => { state.chargement = false; state.profil = action.payload.user; })
+      .addCase(fetchProfil.fulfilled, (state, action) => {
+        state.chargement = false;
+        const d = action.payload.data ?? action.payload;
+        state.profil = d.user ?? d;
+      })
       .addCase(fetchProfil.rejected,  (state, action) => { state.chargement = false; state.erreur = action.payload as string; });
 
     builder
       .addCase(mettreAJourProfil.pending,   (state) => { state.chargement = true; state.erreur = null; })
-      .addCase(mettreAJourProfil.fulfilled, (state, action) => { state.chargement = false; state.profil = action.payload.user; state.messageSucces = "Profil mis à jour"; })
+      .addCase(mettreAJourProfil.fulfilled, (state, action) => {
+        state.chargement = false;
+        const d = action.payload.data ?? action.payload;
+        state.profil = d.user ?? d;
+        state.messageSucces = "Profil mis à jour";
+      })
       .addCase(mettreAJourProfil.rejected,  (state, action) => { state.chargement = false; state.erreur = action.payload as string; });
 
     builder

@@ -32,7 +32,8 @@ const ProductDetail: React.FC = () => {
    const { addError } = useError();
 
   const { products, loading, error } = useSelector((state: RootState) => state.product);
-  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  const { user } = useSelector((state: RootState) => state.auth);
+  const isAuthenticated = !!user;
   const wishlistItems = useSelector((state: RootState) => state.wishlist.items);
 
   const [quantity, setQuantity] = useState(1);
@@ -49,12 +50,6 @@ const ProductDetail: React.FC = () => {
   }, [dispatch, id, product, products.length]);
 
   const handleAddToCart = () => {
-    if (!isAuthenticated) {
-      toast.error(t('auth.loginRequired', 'Veuillez vous connecter pour ajouter des articles au panier'));
-      navigate(ROUTES.PUBLIC.AUTH.LOGIN);
-      return;
-    }
-
     if (!product) return;
 
     if (product.stock === 0) {
@@ -75,11 +70,7 @@ const ProductDetail: React.FC = () => {
   };
 
   const handleAddToWishlist = () => {
-    if (!isAuthenticated || !user?.id || !product) {
-      toast.error(t('auth.loginRequired', 'Veuillez vous connecter pour ajouter aux favoris'));
-      navigate(ROUTES.PUBLIC.AUTH.LOGIN);
-      return;
-    }
+    if (!product) return;
 
     if (isInWishlist) {
       dispatch(retirerWishlist(product.id));

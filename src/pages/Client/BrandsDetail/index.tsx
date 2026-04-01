@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -32,18 +32,22 @@ const CompanyDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<AppDispatch>();
 
-  // Sélection des données Redux
-  const { brandActuel: company, chargement: loading, erreur: error } = useSelector((state: RootState) => state.brand) as any;
+  const { brandActuel, brands, erreur: error } = useSelector((state: RootState) => state.brand) as any;
+  const [fetching, setFetching] = useState(true);
 
-  // Chargement de l'entreprise au montage du composant
+  // Fallback immédiat depuis la liste déjà chargée pendant le fetch
+  const companyFromList = brands?.find((b: any) => b.id === id || b.slug === id);
+  const company = (brandActuel?.id === id ? brandActuel : null) ?? companyFromList;
+
   useEffect(() => {
     if (id) {
-      dispatch(fetchBrandParSlug(id));
+      setFetching(true);
+      dispatch(fetchBrandParSlug(id)).finally(() => setFetching(false));
     }
   }, [dispatch, id]);
 
-  // État de chargement
-  if (loading) {
+  // Spinner pendant le fetch initial (pas de fallback disponible)
+  if (fetching && !company) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
@@ -55,7 +59,7 @@ const CompanyDetail: React.FC = () => {
   }
 
   // État d'erreur ou entreprise introuvable
-  if (error || !company) {
+  if (!fetching && (error || !company)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
         <div className="text-center bg-white rounded-2xl shadow-lg p-12 max-w-md mx-auto">

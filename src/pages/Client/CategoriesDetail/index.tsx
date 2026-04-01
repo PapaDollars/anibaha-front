@@ -62,7 +62,7 @@ export default function CategoryDetail() {
   return (
     <div className="page-categorie">
       {/* Fil d'Ariane */}
-      <nav className="fil-ariane">
+      <nav className="fil-ariane pt-6">
         <Link to="/">Accueil</Link>
         <span className="sep">›</span>
         <Link to="/categories">Catégories</Link>

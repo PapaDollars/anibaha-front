@@ -1,5 +1,5 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -18,9 +18,18 @@ const ClientLayout: React.FC = () => {
     const { t } = useTranslation();
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useSelector((state: RootState) => state.auth);
 
-    // ✅ cart pas encore dans le store → valeur par défaut 0
+    const [isNavigating, setIsNavigating] = useState(false);
+
+    // Barre de progression lors des changements de route
+    useEffect(() => {
+        setIsNavigating(true);
+        const timer = setTimeout(() => setIsNavigating(false), 400);
+        return () => clearTimeout(timer);
+    }, [location.pathname]);
+
     const cartCount = useSelector((state: RootState) =>
         (state as any).cart?.items?.length ?? 0
     );
@@ -81,6 +90,11 @@ const ClientLayout: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            {isNavigating && (
+                <div className="fixed top-0 left-0 right-0 z-[9999] h-1 bg-blue-100">
+                    <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 w-3/4 transition-all duration-300" />
+                </div>
+            )}
             <ClientNavbar
                 user={user as any}
                 onLogin={handleLogin}
@@ -89,7 +103,7 @@ const ClientLayout: React.FC = () => {
                 onVoiceSearch={handleVoiceSearch}
                 onImageSearch={handleImageSearch}
                 cartItems={cartCount}
-                notifications={0} 
+                notifications={0}
             />
             <main className="pt-20 lg:pt-24">
                 <div className="min-h-screen">

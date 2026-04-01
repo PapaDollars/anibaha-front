@@ -45,6 +45,9 @@ const BaseNavbar: React.FC<BaseNavbarProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+
+  useEffect(() => { setNavigatingTo(null); }, [location.pathname]);
   const [showMobileUserMenu, setShowMobileUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showTopBarState, setShowTopBarState] = useState(true);
@@ -498,18 +501,25 @@ const BaseNavbar: React.FC<BaseNavbarProps> = ({
                         <p className="text-sm text-gray-500">{user.email}</p>
                       </div>
                       <div className="py-2">
-                        <Link to={ROUTES.USER.PROFILE.BASE} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
-                          <FontAwesomeIcon icon={faUserCircle} className="text-gray-400" />
-                          <span>Mon profil</span>
-                        </Link>
-                        <Link to={ROUTES.USER.ORDERS.LIST} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
-                          <FontAwesomeIcon icon={faShoppingBag} className="text-gray-400" />
-                          <span>Mes commandes</span>
-                        </Link>
-                        <Link to={ROUTES.USER.SHOPPING.WISHLIST} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
-                          <FontAwesomeIcon icon={faHeart} className="text-gray-400" />
-                          <span>Mes favoris</span>
-                        </Link>
+                        {[
+                          { to: ROUTES.USER.PROFILE.BASE, icon: faUserCircle, label: "Mon profil" },
+                          { to: ROUTES.USER.ORDERS.LIST, icon: faShoppingBag, label: "Mes commandes" },
+                          { to: ROUTES.USER.SHOPPING.WISHLIST, icon: faHeart, label: "Mes favoris" },
+                        ].map(({ to, icon, label }) => (
+                          <Link
+                            key={to}
+                            to={to}
+                            onClick={() => { setNavigatingTo(to); setShowUserMenu(false); }}
+                            className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            {navigatingTo === to ? (
+                              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <FontAwesomeIcon icon={icon} className="text-gray-400" />
+                            )}
+                            <span>{label}</span>
+                          </Link>
+                        ))}
                       </div>
                       <div className="border-t border-gray-100 py-2">
                         <button
