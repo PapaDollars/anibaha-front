@@ -7,6 +7,7 @@ import { faEnvelope, faLock, faEye, faEyeSlash, faShoppingCart } from '@fortawes
 import { faGoogle } from '@fortawesome/free-brands-svg-icons';
 
 import { login } from '@/store/slices/authSlice';
+import { syncCart } from '@/store/slices/cartSlice';
 import { RootState, AppDispatch } from '@/store';
 import { ROUTES } from '@/utils/url/url_frontend';
 
@@ -49,7 +50,7 @@ const Login: React.FC = () => {
     if (!validateForm()) return;
     try {
       await dispatch(login(formData)).unwrap();
-      // ✅ La redirection est gérée par le useEffect ci-dessus
+      dispatch(syncCart()); // Fusionne le panier localStorage avec la DB
     } catch (err) {
       console.error('Erreur connexion:', err);
     }

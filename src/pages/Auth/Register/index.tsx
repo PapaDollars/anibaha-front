@@ -7,6 +7,7 @@ import { faUser, faEnvelope, faLock, faEye, faEyeSlash, faShoppingCart, faCheck,
 import { faGoogle } from '@fortawesome/free-brands-svg-icons';
 
 import { register } from '@/store/slices/authSlice';
+import { syncCart } from '@/store/slices/cartSlice';
 import { RootState, AppDispatch } from '@/store';
 import { ROUTES } from '@/utils/url/url_frontend';
 
@@ -70,6 +71,7 @@ const Register: React.FC = () => {
         password: formData.password,
         confirmPassword: formData.confirmPassword,
       })).unwrap();
+      dispatch(syncCart()); // Fusionne le panier localStorage avec la DB
     } catch (err) {
       console.error("Erreur inscription:", err);
     }

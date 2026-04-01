@@ -227,7 +227,6 @@ const BaseNavbar: React.FC<BaseNavbarProps> = ({
                 >
                   <option value="fr" className="text-black">Français</option>
                   <option value="en" className="text-black">English</option>
-                  <option value="es" className="text-black">Español</option>
                 </select>
               </div>
               <div className="flex items-center space-x-3">
@@ -413,21 +412,19 @@ const BaseNavbar: React.FC<BaseNavbarProps> = ({
 
             {/* User Actions */}
             <div className="flex items-center space-x-2">
-              {/* Cart - for authenticated users (Mobile + Desktop) */}
-              {user && user.role !== 'visitor' && (
-                <Link
-                  to={ROUTES.PUBLIC.CATALOG.CART}
-                  className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-300 group"
-                  title="Mon panier"
-                >
-                  <FontAwesomeIcon icon={faShoppingCart} className="group-hover:scale-110 transition-transform" />
-                  {cartItems > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
-                      {cartItems}
-                    </span>
-                  )}
-                </Link>
-              )}
+              {/* Cart - visible for all users */}
+              <Link
+                to={ROUTES.PUBLIC.CATALOG.CART}
+                className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-300 group"
+                title="Mon panier"
+              >
+                <FontAwesomeIcon icon={faShoppingCart} className="group-hover:scale-110 transition-transform" />
+                {cartItems > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
+                    {cartItems}
+                  </span>
+                )}
+              </Link>
 
               {/* Notifications - for authenticated users (Mobile + Desktop) */}
               {user && (
@@ -647,7 +644,7 @@ const BaseNavbar: React.FC<BaseNavbarProps> = ({
                       </Link>
 
                       <Link
-                        to={ROUTES.USER.SHOPPING.CART}
+                        to={ROUTES.PUBLIC.CATALOG.CART}
                         className="flex items-center justify-between px-4 py-3 text-gray-700 hover:bg-white rounded-xl transition-colors text-sm"
                         onClick={() => {
                           setShowMobileUserMenu(false);
@@ -682,6 +679,21 @@ const BaseNavbar: React.FC<BaseNavbarProps> = ({
               </div>
             ) : (
               <div className="flex flex-col space-y-3 pt-4 border-t border-gray-200">
+                <Link
+                  to={ROUTES.PUBLIC.CATALOG.CART}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center justify-between px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors text-sm"
+                >
+                  <div className="flex items-center space-x-3">
+                    <FontAwesomeIcon icon={faShoppingCart} className="text-gray-400" />
+                    <span>Panier</span>
+                  </div>
+                  {cartItems > 0 && (
+                    <span className="bg-blue-500 text-white px-2 py-1 rounded-full text-xs">
+                      {cartItems}
+                    </span>
+                  )}
+                </Link>
                 <button
                   onClick={() => {
                     onLogin();

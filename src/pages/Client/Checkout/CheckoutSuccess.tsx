@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { ROUTES } from '@/utils/url/url_frontend';
 
 const CheckoutSuccess: React.FC = () => {
   return (
@@ -29,13 +30,13 @@ const CheckoutSuccess: React.FC = () => {
         </p>
         <div className="mt-8 space-x-4">
           <Link
-            to="/orders"
+            to={ROUTES.USER.ORDERS.LIST}
             className="inline-block bg-primary text-white px-8 py-3 rounded-lg font-medium hover:bg-primary-700"
           >
             Voir mes commandes
           </Link>
           <Link
-            to="/products"
+            to={ROUTES.PUBLIC.CATALOG.PRODUCTS}
             className="inline-block bg-gray-100 text-gray-700 px-8 py-3 rounded-lg font-medium hover:bg-gray-200"
           >
             Continuer mes achats

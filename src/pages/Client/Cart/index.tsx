@@ -7,12 +7,12 @@ import {
   viderPanier,
 } from "@/store/slices/cartSlice";
 import { formatFCFA } from "@/utils/formatPrix";
+import { ROUTES } from "@/utils/url/url_frontend";
 
 export default function Cart() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { items, chargement } = useSelector((state: RootState) => state.cart);
-  const { user } = useSelector((state: RootState) => state.auth);
 
   // Calcul du total en FCFA
   const total = items.reduce(
@@ -33,11 +33,7 @@ export default function Cart() {
   };
 
   const gererCommande = () => {
-    if (!user) {
-      navigate("/connexion?redirect=/panier");
-      return;
-    }
-    navigate("/commande");
+    navigate(ROUTES.USER.SHOPPING.CHECKOUT);
   };
 
   if (items.length === 0) {
@@ -46,7 +42,7 @@ export default function Cart() {
         <div className="panier-vide-icone">🛒</div>
         <h2>Votre panier est vide</h2>
         <p>Découvrez nos produits et ajoutez-les à votre panier</p>
-        <Link to="/produits" className="bouton-primaire">
+        <Link to={ROUTES.PUBLIC.CATALOG.PRODUCTS} className="bouton-primaire">
           Parcourir les produits
         </Link>
 
@@ -89,14 +85,14 @@ export default function Cart() {
               />
               <div className="article-info">
                 <Link
-                  to={`/produits/${item.product!.slug}`}
+                  to={ROUTES.GENERATORS.getProductDetails(item.product!.id)}
                   className="article-nom"
                 >
                   {item.product!.name}
                 </Link>
                 <div className="article-vendeur">
                   Par{" "}
-                  <Link to={`/companies/${item.product!.company?.slug}`}>
+                  <Link to={ROUTES.GENERATORS.getBrandProducts(item.product!.company?.slug ?? '')}>
                     {item.product!.company?.name}
                   </Link>
                 </div>
@@ -179,7 +175,7 @@ export default function Cart() {
             onClick={gererCommande}
             disabled={chargement}
           >
-            {user ? "Passer la commande" : "Se connecter pour commander"}
+            Passer la commande
           </button>
 
           <Link to="/produits" className="lien-continuer">

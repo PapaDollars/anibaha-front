@@ -5,6 +5,7 @@ import { AppDispatch, RootState } from "@/store";
 import { passerCommande } from "@/store/slices/orderSlice";
 import { viderPanier } from "@/store/slices/cartSlice";
 import { formatFCFA } from "@/utils/formatPrix";
+import { ROUTES } from "@/utils/url/url_frontend";
 
 export default function Checkout() {
   const dispatch = useDispatch<AppDispatch>();
@@ -22,6 +23,13 @@ export default function Checkout() {
     instructions: "",
   });
 
+  const [invité, setInvité] = useState({
+    prenom: "",
+    nom: "",
+    email: "",
+    telephone: "",
+  });
+
   // Calcul du total en FCFA
   const total = items.reduce(
     (acc, item) => acc + (item.product?.price ?? item.unitPrice ?? 0) * item.quantity,
@@ -31,25 +39,37 @@ export default function Checkout() {
   const soumettreCommande = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const resultat = await dispatch(
-      passerCommande({
-        items: items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-        })),
-        adresseLivraison: adresse,
-        modePaiement: "cash_on_delivery",
-      })
-    );
+    const payload: Parameters<typeof passerCommande>[0] = {
+      items: items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+      })),
+      adresseLivraison: {
+        ...adresse,
+        telephone: adresse.telephone || invité.telephone,
+      },
+      modePaiement: "cash_on_delivery",
+    };
+
+    if (!user) {
+      payload.guestInfo = {
+        firstName: invité.prenom,
+        lastName: invité.nom,
+        email: invité.email,
+        phone: invité.telephone,
+      };
+    }
+
+    const resultat = await dispatch(passerCommande(payload));
 
     if (passerCommande.fulfilled.match(resultat)) {
       dispatch(viderPanier());
-      navigate(`/user/orders/${(resultat.payload as any).id ?? (resultat.payload as any).order?.id}`);
+      navigate(ROUTES.USER.SHOPPING.PAYMENT_SUCCESS);
     }
   };
 
   if (items.length === 0) {
-    navigate("/panier");
+    navigate(ROUTES.PUBLIC.CATALOG.CART);
     return null;
   }
 
@@ -60,6 +80,60 @@ export default function Checkout() {
       <div className="checkout-grille">
         {/* Formulaire d'adresse */}
         <div className="checkout-formulaire">
+          {/* Infos personnelles — invités uniquement */}
+          {!user && (
+            <div className="section-card">
+              <h2 className="section-titre">Vos informations</h2>
+              <p className="section-note">Un compte inactif sera créé automatiquement avec ces infos.</p>
+              <div className="grille-2">
+                <div className="groupe-champ">
+                  <label>Prénom *</label>
+                  <input
+                    type="text"
+                    required
+                    value={invité.prenom}
+                    onChange={(e) => setInvité((i) => ({ ...i, prenom: e.target.value }))}
+                    placeholder="Ex : Jean"
+                    form="form-checkout"
+                  />
+                </div>
+                <div className="groupe-champ">
+                  <label>Nom *</label>
+                  <input
+                    type="text"
+                    required
+                    value={invité.nom}
+                    onChange={(e) => setInvité((i) => ({ ...i, nom: e.target.value }))}
+                    placeholder="Ex : Dupont"
+                    form="form-checkout"
+                  />
+                </div>
+              </div>
+              <div className="groupe-champ">
+                <label>Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={invité.email}
+                  onChange={(e) => setInvité((i) => ({ ...i, email: e.target.value }))}
+                  placeholder="Ex : jean@email.com"
+                  form="form-checkout"
+                />
+              </div>
+              <div className="groupe-champ">
+                <label>Téléphone *</label>
+                <input
+                  type="tel"
+                  required
+                  value={invité.telephone}
+                  onChange={(e) => setInvité((i) => ({ ...i, telephone: e.target.value }))}
+                  placeholder="+237 6XX XXX XXX"
+                  form="form-checkout"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="section-card">
             <h2 className="section-titre">Adresse de livraison</h2>
             <form onSubmit={soumettreCommande} id="form-checkout">
@@ -221,7 +295,8 @@ export default function Checkout() {
           padding: 20px;
           border: 1px solid #e5e7eb;
         }
-        .section-titre { font-size: 16px; font-weight: 700; color: #111; margin: 0 0 16px; }
+        .section-titre { font-size: 16px; font-weight: 700; color: #111; margin: 0 0 8px; }
+        .section-note { font-size: 13px; color: #6b7280; margin: 0 0 16px; }
 
         .groupe-champ { margin-bottom: 14px; }
         .groupe-champ label {

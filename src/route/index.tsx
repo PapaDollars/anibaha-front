@@ -35,6 +35,7 @@ const Orders = lazy(() => import('@/pages/Client/Orders'));
 const OrderDetails = lazy(() => import('@/pages/Client/OrderDetail'));
 const Profile = lazy(() => import('@/pages/Client/Profile'));
 const Wishlist = lazy(() => import('@/pages/Client/Wishlist'));
+const CheckoutSuccess = lazy(() => import('@/pages/Client/Checkout/CheckoutSuccess'));
 // Pages Companies - Lazy load
 const AdminDashboard = lazy(() => import('@/pages/Company/Dashboard'));
 const AdminProducts = lazy(() => import('@/pages/Company/Products'));
@@ -148,11 +149,19 @@ const AppRoutes: React.FC = () => {
             </Suspense>
           }
         />
-        <Route 
-          path={ROUTES.USER.SHOPPING.CHECKOUT} 
+        <Route
+          path={ROUTES.USER.SHOPPING.CHECKOUT}
           element={
             <Suspense fallback={<PageLoader message="Chargement de la commande..." />}>
               <Checkout />
+            </Suspense>
+          }
+        />
+        <Route
+          path={ROUTES.USER.SHOPPING.PAYMENT_SUCCESS}
+          element={
+            <Suspense fallback={<PageLoader message="Chargement..." />}>
+              <CheckoutSuccess />
             </Suspense>
           }
         />

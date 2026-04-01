@@ -26,15 +26,17 @@ apiClient.interceptors.response.use(
     const original = error.config as AxiosRequestConfig & { _retry?: boolean };
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
+      const refreshToken = localStorage.getItem('refreshToken');
+      // Pas de refresh token = invité, on ne redirige pas vers login
+      if (!refreshToken) return Promise.reject(error);
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) throw new Error('Pas de refresh token');
         const { data } = await axios.post(`${BASE_URL}/api/auth/refresh`, { refreshToken });
         const newToken = data.data.accessToken;
         localStorage.setItem('accessToken', newToken);
         if (original.headers) original.headers.Authorization = `Bearer ${newToken}`;
         return apiClient(original);
       } catch {
+        // Le refresh a échoué = session expirée, on déconnecte et redirige
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');

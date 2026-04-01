@@ -131,7 +131,7 @@ export default function OrderList() {
                   {formatFCFA(commande.totals?.total ?? 0)}
                 </div>
                 <Link
-                  to={`/commandes/${commande.id}`}
+                  to={`/user/orders/${commande.id}`}
                   className="lien-details"
                 >
                   Voir les détails →

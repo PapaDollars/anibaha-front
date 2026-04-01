@@ -95,6 +95,7 @@ export const passerCommande = createAsyncThunk(
     items: { productId: string; quantity: number }[];
     adresseLivraison: Record<string, unknown>;
     modePaiement: string;
+    guestInfo?: { firstName: string; lastName: string; email: string; phone: string };
   }, { rejectWithValue }) => {
     try {
       const response = await api.post<Order>(API_ROUTES.ORDERS.CREATE, {
@@ -103,6 +104,7 @@ export const passerCommande = createAsyncThunk(
         billingAddress: data.adresseLivraison,
         paymentMethod: data.modePaiement,
         shippingMethod: 'standard',
+        ...(data.guestInfo && { guestInfo: data.guestInfo }),
       });
       return response.data;
     } catch (err: unknown) {

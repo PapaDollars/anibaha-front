@@ -83,12 +83,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       e.stopPropagation();
     }
 
-    if (!isAuthenticated) {
-      toast.error(t('auth.loginRequired', 'Veuillez vous connecter pour ajouter au panier'));
-      navigate(ROUTES.PUBLIC.AUTH.LOGIN);
-      return;
-    }
-
     onAddToCart?.(product, quantity);
     toast.success(t('cart.added', 'Produit ajouté au panier'));
   };

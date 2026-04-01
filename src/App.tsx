@@ -8,6 +8,7 @@ import { AppDispatch } from '@/store/index';
 const Routes = React.lazy(() => import('@/route'));
 
 import { fetchMe } from '@/store/slices/authSlice';
+import { syncCart } from '@/store/slices/cartSlice';
 import { useError } from '@/context/ErrorContext';
 import '@/index.css';
 
@@ -28,7 +29,9 @@ const App: React.FC = () => {
   useEffect(() => {
     const token = localStorage.getItem('accessToken'); // ✅ accessToken pas token
     if (token) {
-      dispatch(fetchMe()).catch(() => {
+      dispatch(fetchMe()).then((result) => {
+        if (fetchMe.fulfilled.match(result)) dispatch(syncCart());
+      }).catch(() => {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
